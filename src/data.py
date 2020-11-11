@@ -3,21 +3,23 @@ import os
 
 import numpy as np
 import sentencepiece as spm
-from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
+
+from utils import print_data_stats
 
 logger = logging.getLogger()
 
 
-class WMT2014Dataset(Dataset):
+class WMT2014Dataset():
     def __init__(self, args):
         self.args = args
-        self.max_seq_len = self.args.max_seq_len
 
-        self.data = self.load()
+        self.train_data = self.load(mode='train')
+        self.valid_data = self.load(mode='valid')
 
         if self.args.debug:
-            self.data = self.data[:100]
+            self.train_data = self.train_data[:100]
+            self.valid_data = self.valid_data[:100]
 
         ############# Load/train tokenizer. #############################################################################
         self.tokenizer = spm.SentencePieceProcessor()
@@ -32,50 +34,64 @@ class WMT2014Dataset(Dataset):
             self.tokenizer.load(self.tokenizer_path + '.model')
         #################################################################################################################
 
-        self.tokenized_data = self.tokenize()
+        self.train_tokenized_data = self.tokenize(mode='train')
+        self.valid_tokenized_data = self.tokenize(mode='valid')
 
-        src_longest = max([len(x[0]) for x in self.tokenized_data])
-        tgt_longest = max([len(x[1]) for x in self.tokenized_data])
-        print('==================================================================================================')
-        print("len(self.data) = {}".format(len(self.data)))
-        print('--------------------------------------------------------------------------------------------------')
-        print("Longest sequence for src length: {}".format(src_longest))
-        print("Longest sequence for src sentence: {}".format(self.data[np.argmax([len(x[0]) for x in self.tokenized_data])][0]))
-        print('--------------------------------------------------------------------------------------------------')
-        print("Shortest sequence for src length: {}".format(min([len(x[0]) for x in self.tokenized_data])))
-        print("Shortest sequence for src sentence: {}".format(self.data[np.argmin([len(x[0]) for x in self.tokenized_data])][0]))
-        print('--------------------------------------------------------------------------------------------------')
-        print("Longest sequence for tgt length: {}".format(tgt_longest))
-        print("Longest sequence for tgt sentence: {}".format(self.data[np.argmax([len(x[1]) for x in self.tokenized_data])][1]))
-        print('--------------------------------------------------------------------------------------------------')
-        print("Shortest sequence for src length: {}".format(min([len(x[1]) for x in self.tokenized_data])))
-        print("Shortest sequence for src sentence: {}".format(self.data[np.argmin([len(x[1]) for x in self.tokenized_data])][1]))
-        print('==================================================================================================')
+        print_data_stats(og_data=self.train_data, tokenized_data=self.train_tokenized_data)
+        print_data_stats(og_data=self.valid_data, tokenized_data=self.valid_tokenized_data)
+
+        src_train_longest = max([len(x[0]) for x in self.train_tokenized_data])
+        tgt_train_longest = max([len(x[1]) for x in self.train_tokenized_data])
+        self.max_seq_len = max(src_train_longest, tgt_train_longest)
+
+        self.src_train_data, self.tgt_train_data = self.process(self.train_tokenized_data)
+        self.src_valid_data, self.tgt_valid_data = self.process(self.valid_tokenized_data)
 
         import pdb; pdb.set_trace()
 
-        self.max_seq_len = max(src_longest, tgt_longest)
+    def load(self, mode='train'):
+        if mode == 'train':
+            logger.info("Loading src and tgt from %s | %s" % (self.args.src_train_file, self.args.tgt_train_file))
+            with open(file=self.args.src_train_file, mode='r', encoding='utf-8') as f:
+                src_data = [line.lower().strip() for line in f.readlines()]
 
-    def __len__(self):
-        return len(self.tokenized_data)
+            with open(file=self.args.tgt_train_file, mode='r', encoding='utf-8') as f:
+                tgt_data = [line.lower().strip() for line in f.readlines()]
+        elif mode == 'valid':
+            logger.info("Loading src and tgt from %s | %s" % (self.args.src_valid_file, self.args.tgt_valid_file))
+            with open(file=self.args.src_valid_file, mode='r', encoding='utf-8') as f:
+                src_data = [line.lower().strip() for line in f.readlines()]
 
-    def __getitem__(self, idx):
-        return self.tokenized_data[idx]
-
-    def load(self):
-        logger.info("Loading src and tgt from %s | %s" % (self.args.src_train_file, self.args.tgt_train_file))
-        with open(file=self.args.src_train_file, mode='r', encoding='utf-8') as f:
-            src_data = [line.lower().strip() for line in f.readlines()]
-
-        with open(file=self.args.tgt_train_file, mode='r', encoding='utf-8') as f:
-            tgt_data = [line.lower().strip() for line in f.readlines()]
+            with open(file=self.args.tgt_valid_file, mode='r', encoding='utf-8') as f:
+                tgt_data = [line.lower().strip() for line in f.readlines()]
+        else:
+            raise NotImplementedError
 
         return [[src, tgt] for src, tgt in zip(src_data, tgt_data)]
 
-    def tokenize(self):
-        logger.info("Tokenizing data...")
-        progress_bar = tqdm(iterable=self.data, desc="Tokenizing data", total=len(self.data))
+    def tokenize(self, mode='train'):
+        if mode == 'train':
+            logger.info("Tokenizing train data...")
+            progress_bar = tqdm(iterable=self.train_data, desc="Tokenizing train data", total=len(self.train_data))
+        elif mode == 'valid':
+            logger.info("Tokenizing valid data...")
+            progress_bar = tqdm(iterable=self.valid_data, desc="Tokenizing valid data", total=len(self.valid_data))
+        else:
+            raise NotImplementedError
+
         return [[self.tokenizer.EncodeAsIds(src), self.tokenizer.EncodeAsIds(tgt)] for src, tgt in progress_bar]
 
     def process(self, data):
-        pass
+        logger.info("Converting tokenized data into input templtes.")
+        src_data = [x[0] for x in data]
+        tgt_data = [x[1] for x in data]
+        src_data_template = np.zeros(shape=(len(data), self.max_seq_len))
+        tgt_data_template = np.zeros(shape=(len(data), self.max_seq_len))
+
+        assert src_data_template.shape == tgt_data_template.shape, "src and tgt are different shapes!"
+
+        for i in range(src_data_template.shape[0]):
+            src_data_template[i][:len(src_data[i])] = src_data[i]
+            tgt_data_template[i][:len(tgt_data[i])] = tgt_data[i]
+
+        return src_data_template, tgt_data_template
