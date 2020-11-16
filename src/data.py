@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import sentencepiece as spm
+import torch
 from tqdm import tqdm
 
 from utils import print_data_stats
@@ -47,7 +48,10 @@ class WMT2014Dataset():
         self.src_train_data, self.tgt_train_data = self.process(self.train_tokenized_data)
         self.src_valid_data, self.tgt_valid_data = self.process(self.valid_tokenized_data)
 
-        import pdb; pdb.set_trace()
+        self.src_train_data = torch.tensor(self.src_train_data)
+        self.tgt_train_data = torch.tensor(self.tgt_train_data)
+        self.src_valid_data = torch.tensor(self.src_valid_data)
+        self.tgt_valid_data = torch.tensor(self.tgt_valid_data)
 
     def load(self, mode='train'):
         if mode == 'train':
