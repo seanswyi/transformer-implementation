@@ -47,15 +47,10 @@ class MultiHeadAttention(nn.Module):
         self.num_heads = args.num_heads
         self.WO = nn.Linear(in_features=(self.num_heads * args.d_v), out_features=args.d_model)
 
-        self.single_head_attention = SingleHeadAttention(args, mask=self.mask)
+        self.attention_heads = [SingleHeadAttention(args, mask=self.mask) for _ in range(self.num_heads)]
 
     def forward(self, q, k, v):
-        attention_results = []
-
-        for _ in range(self.num_heads):
-            attention_output = self.single_head_attention(q, k, v)
-            attention_results.append(attention_output.clone().detach())
-
+        attention_results = [head(q, k, v) for head in self.attention_heads]
         attention_concatenated = torch.cat(attention_results, dim=1)
         output = self.WO(attention_concatenated)
 
