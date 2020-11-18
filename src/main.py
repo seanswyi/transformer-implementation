@@ -25,6 +25,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_root', default='../data/', type=str)
     parser.add_argument('--debug', action='store_true', default=False)
+    parser.add_argument('--d_ff', default=2048, type=int)
     parser.add_argument('--d_model', default=512, type=int)
     parser.add_argument('--d_k', default=512, type=int)
     parser.add_argument('--d_v', default=512, type=int)
