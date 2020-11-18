@@ -1,9 +1,7 @@
-import torch
 import torch.nn as nn
 
 from models.embedding_layer import EmbeddingLayer
 from models.encoder import Encoder
-from models.multihead_attention import MultiHeadAttention
 
 
 class Transformer(nn.Module):
@@ -14,6 +12,7 @@ class Transformer(nn.Module):
         self.encoder = Encoder(args)
 
     def forward(self, x):
-        thing = self.encoder(x)
-        import pdb; pdb.set_trace()
-        pass
+        x = self.emb(x.long())
+        output = self.encoder(x)
+
+        return output
