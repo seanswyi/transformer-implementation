@@ -8,7 +8,7 @@ class Decoder(nn.Module):
     def __init__(self, args):
         super(Decoder, self).__init__()
         self.ffnn = FeedForwardNN(args)
-        self.layer = nn.LayerNorm(normalized_shape=args.d_model)
+        self.layernorm = nn.LayerNorm(normalized_shape=args.d_model)
         self.multihead_attention = MultiHeadAttention(args)
         self.masked_multihead_attention = MultiHeadAttention(args, mask=True)
 
