@@ -16,7 +16,7 @@ def main(args):
 
     data = WMT2014Dataset(args)
     model = Transformer(args)
-    thing = model(data.src_train_data[0])
+    thing = model(data.src_train_data[0], data.tgt_train_data[0])
     # Run the embedded version into single head attention.
     import pdb; pdb.set_trace()
 
