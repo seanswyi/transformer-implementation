@@ -30,6 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--d_k', default=512, type=int)
     parser.add_argument('--d_v', default=512, type=int)
     parser.add_argument('--num_heads', default=8, type=int)
+    parser.add_argument('--num_stacks', default=6, type=int)
     parser.add_argument('--src_train_file', default='../data/train.fr-en_preprocessed.fr', type=str)
     parser.add_argument('--tgt_train_file', default='../data/train.fr-en_preprocessed.en', type=str)
     parser.add_argument('--src_valid_file', default='../data/valid.fr-en_preprocessed.fr', type=str)
