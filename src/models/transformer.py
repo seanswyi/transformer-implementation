@@ -10,8 +10,8 @@ class Transformer(nn.Module):
         super(Transformer, self).__init__()
 
         self.emb = EmbeddingLayer(args)
-        self.encoder_stack = nn.ModuleList([Encoder(args) for _ in args.num_stacks])
-        self.decoder_stack = nn.ModuleList([Decoder(args) for _ in args.num_stacks])
+        self.encoder_stack = nn.ModuleList([Encoder(args) for _ in range(args.num_stacks)])
+        self.decoder_stack = nn.ModuleList([Decoder(args) for _ in range(args.num_stacks)])
         self.output_linear = nn.Linear(in_features=args.d_model, out_features=args.vocab_size)
 
     def forward(self, src, tgt):
