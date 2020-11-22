@@ -2,12 +2,14 @@ import argparse
 import logging
 import os
 
-import sentencepiece as spm
-
 from data import WMT2014Dataset
 from models.transformer import Transformer
 
 logger = logging.getLogger()
+
+
+def train(args, model, data):
+    pass
 
 
 def main(args):
@@ -16,6 +18,7 @@ def main(args):
 
     data = WMT2014Dataset(args)
     model = Transformer(args)
+    import pdb; pdb.set_trace()
     thing = model(data.src_train_data[0], data.tgt_train_data[0])
     # Run the embedded version into single head attention.
     import pdb; pdb.set_trace()
@@ -23,6 +26,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--batch_size', default=1, type=int)
     parser.add_argument('--data_root', default='../data/', type=str)
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument('--d_ff', default=2048, type=int)
