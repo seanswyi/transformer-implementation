@@ -17,8 +17,8 @@ class Transformer(nn.Module):
     def forward(self, src, tgt):
         src_emb = self.emb(src.long())
         tgt_emb = self.emb(tgt.long())
-        encoder_output = self.encoder(src_emb)
-        decoder_output = self.decoder(tgt_emb, encoder_output)
+        encoder_output = self.encoder_stack(src_emb)
+        decoder_output = self.decoder_stack(tgt_emb, encoder_output)
         output = self.output_linear(decoder_output)
 
         return output
