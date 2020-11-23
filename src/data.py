@@ -14,13 +14,17 @@ logger = logging.getLogger()
 class WMT2014Dataset():
     def __init__(self, args):
         self.args = args
+        self.batch_size = self.args.batch_size
 
+        ############# Load raw data. ####################################################################################
         self.train_data = self.load(mode='train')
         self.valid_data = self.load(mode='valid')
 
+        # If debug argument is set only use 100 samples.
         if self.args.debug:
             self.train_data = self.train_data[:100]
             self.valid_data = self.valid_data[:100]
+        #################################################################################################################
 
         ############# Load/train tokenizer. #############################################################################
         self.tokenizer = spm.SentencePieceProcessor()
@@ -52,6 +56,13 @@ class WMT2014Dataset():
         self.tgt_train_data = torch.tensor(self.tgt_train_data)
         self.src_valid_data = torch.tensor(self.src_valid_data)
         self.tgt_valid_data = torch.tensor(self.tgt_valid_data)
+
+        ############# Create batches. ##### #############################################################################
+        self.src_train_data = self.create_batches(data=self.src_train_data)
+        self.tgt_train_data = self.create_batches(data=self.tgt_train_data)
+        self.src_valid_data = self.create_batches(data=self.src_valid_data)
+        self.tgt_valid_data = self.create_batches(data=self.tgt_valid_data)
+        #################################################################################################################
 
     def load(self, mode='train'):
         if mode == 'train':
@@ -86,7 +97,7 @@ class WMT2014Dataset():
         return [[self.tokenizer.EncodeAsIds(src), self.tokenizer.EncodeAsIds(tgt)] for src, tgt in progress_bar]
 
     def process(self, data):
-        logger.info("Converting tokenized data into input templtes.")
+        logger.info("Converting tokenized data into input templates.")
         src_data = [x[0] for x in data]
         tgt_data = [x[1] for x in data]
         src_data_template = np.zeros(shape=(len(data), self.max_seq_len))
@@ -99,3 +110,13 @@ class WMT2014Dataset():
             tgt_data_template[i][:len(tgt_data[i])] = tgt_data[i]
 
         return src_data_template, tgt_data_template
+
+    def create_batches(self, data):
+        num_batches = len(data) // self.batch_size
+        batch_data = data[:(num_batches * self.batch_size)]
+
+        num_discarded_samples = len(data) - (num_batches * self.batch_size)
+        if num_discarded_samples:
+            logger.info("Discarding %d sample(s)." % (len(data) - (num_batches * self.batch_size)))
+
+        return batch_data.view(self.batch_size, num_batches, -1)
