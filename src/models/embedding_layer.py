@@ -11,6 +11,7 @@ class EmbeddingLayer(nn.Module):
         self.embedding_layer = nn.Embedding(num_embeddings=args.vocab_size, embedding_dim=args.d_model, padding_idx=0)
 
     def forward(self, x):
+        import pdb; pdb.set_trace()
         x_embedding = self.embedding_layer(x)
         x_embedding += self.positional_encoding_layer(x_embedding)
 
