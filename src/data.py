@@ -52,16 +52,17 @@ class WMT2014Dataset():
         self.src_train_data, self.tgt_train_data = self.process(self.train_tokenized_data)
         self.src_valid_data, self.tgt_valid_data = self.process(self.valid_tokenized_data)
 
-        self.src_train_data = torch.tensor(self.src_train_data)
-        self.tgt_train_data = torch.tensor(self.tgt_train_data)
-        self.src_valid_data = torch.tensor(self.src_valid_data)
-        self.tgt_valid_data = torch.tensor(self.tgt_valid_data)
+        self.train_data = torch.tensor([[x, y] for x, y in zip(self.src_train_data, self.tgt_train_data)])
+        self.valid_data = torch.tensor([[x, y] for x, y in zip(self.src_valid_data, self.tgt_valid_data)])
 
         ############# Create batches. ##### #############################################################################
-        self.src_train_data = self.create_batches(data=self.src_train_data)
-        self.tgt_train_data = self.create_batches(data=self.tgt_train_data)
-        self.src_valid_data = self.create_batches(data=self.src_valid_data)
-        self.tgt_valid_data = self.create_batches(data=self.tgt_valid_data)
+        self.train_data = self.create_batches(data=self.train_data)
+        self.valid_data = self.create_batches(data=self.valid_data)
+        #################################################################################################################
+
+        ############# Shuffle training data. ############################################################################
+        shuffle_idxs = torch.randperm(n=self.train_data.shape[1])
+        self.train_data = self.train_data[:, shuffle_idxs]
         #################################################################################################################
 
     def load(self, mode='train'):
@@ -119,4 +120,4 @@ class WMT2014Dataset():
         if num_discarded_samples:
             logger.info("Discarding %d sample(s)." % (len(data) - (num_batches * self.batch_size)))
 
-        return batch_data.view(self.batch_size, num_batches, -1)
+        return batch_data.view(self.batch_size, num_batches, 2, self.max_seq_len)
