@@ -11,15 +11,14 @@ class EmbeddingLayer(nn.Module):
         self.embedding_layer = nn.Embedding(num_embeddings=args.vocab_size, embedding_dim=args.d_model, padding_idx=0)
 
     def forward(self, x):
-        import pdb; pdb.set_trace()
         x_embedding = self.embedding_layer(x)
         x_embedding += self.positional_encoding_layer(x_embedding)
 
         return x_embedding
 
     def positional_encoding_layer(self, x):
-        positions = np.arange(x.shape[0])
-        dimensions = np.arange(x.shape[1])
+        positions = np.arange(x.shape[1])
+        dimensions = np.arange(x.shape[2])
 
         denominator = np.power(10000, (2 * dimensions) / self.args.d_model)
         input_angles = positions.reshape(-1, 1) / denominator.reshape(1, -1) # We want shape (sequence_length, d_model)
