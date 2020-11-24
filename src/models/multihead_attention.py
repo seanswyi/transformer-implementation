@@ -1,7 +1,12 @@
+import logging
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+logger = logging.getLogger()
 
 
 def attention(q, k, v, d_k=512, mask=False):
@@ -11,6 +16,12 @@ def attention(q, k, v, d_k=512, mask=False):
     if mask:
         ones = torch.ones(size=qk.shape)
         mask_matrix = torch.tril(ones)
+
+        if qk.is_cuda:
+            mask_matrix = mask_matrix.to('cuda')
+        else:
+            logger.warning("Not using GPU!")
+
         qk *= mask_matrix
 
     qk = F.softmax(qk, dim=1)
@@ -47,7 +58,7 @@ class MultiHeadAttention(nn.Module):
         self.num_heads = args.num_heads
         self.WO = nn.Linear(in_features=(self.num_heads * args.d_v), out_features=args.d_model)
 
-        self.attention_heads = [SingleHeadAttention(args, mask=self.mask) for _ in range(self.num_heads)]
+        self.attention_heads = nn.ModuleList([SingleHeadAttention(args, mask=self.mask) for _ in range(self.num_heads)])
 
     def forward(self, q, k, v):
         attention_results = [head(q, k, v) for head in self.attention_heads]
