@@ -2,6 +2,8 @@ import argparse
 import logging
 import os
 
+import torch
+
 from data import WMT2014Dataset
 from models.transformer import Transformer
 
@@ -11,6 +13,7 @@ logger = logging.getLogger()
 def train(args, model, data):
     for epoch in range(args.num_epochs):
         for batch in data.train_data:
+            import pdb; pdb.set_trace()
             src, tgt = batch[:, 0], batch[:, 1]
             thing = model(src, tgt)
             import pdb; pdb.set_trace()

@@ -19,7 +19,6 @@ class Transformer(nn.Module):
         self.output_linear = nn.Linear(in_features=self.d_model, out_features=self.vocab_size)
 
     def forward(self, src, tgt):
-        import pdb; pdb.set_trace()
         src_emb = self.emb(src.long())
         tgt_emb = self.emb(tgt.long())
         encoder_output = self.encode(src_emb)
