@@ -1,7 +1,11 @@
+import logging
+
 import numpy as np
 import torch
 import torch.nn as nn
 
+
+logger = logging.getLogger()
 
 class EmbeddingLayer(nn.Module):
     def __init__(self, args):
@@ -26,5 +30,11 @@ class EmbeddingLayer(nn.Module):
         positional_encoding_values = np.zeros(shape=input_angles.shape)
         positional_encoding_values[:, 0::2] = np.sin(input_angles[:, 0::2])
         positional_encoding_values[:, 1::2] = np.cos(input_angles[:, 1::2])
+        positional_encoding_values = torch.tensor(positional_encoding_values)
 
-        return torch.tensor(positional_encoding_values)
+        if torch.cuda.is_available():
+            positional_encoding_values = positional_encoding_values.to('cuda')
+        else:
+            logger.warning("Not using GPU!")
+
+        return positional_encoding_values
