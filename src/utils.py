@@ -1,6 +1,14 @@
 import numpy as np
 
 
+def adjust_learning_rate(step_num, args):
+    step_num += 1e-20
+    term1 = np.power(args.d_model, -0.5)
+    term2 = min(np.power(step_num, -0.5), step_num * np.power(args.warmup_steps, -1.5))
+
+    return term1 * term2
+
+
 def print_data_stats(og_data, tokenized_data):
     src_longest = max([len(x[0]) for x in tokenized_data])
     tgt_longest = max([len(x[1]) for x in tokenized_data])
