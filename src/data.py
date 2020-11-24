@@ -120,4 +120,4 @@ class WMT2014Dataset():
         if num_discarded_samples:
             logger.info("Discarding %d sample(s)." % (len(data) - (num_batches * self.batch_size)))
 
-        return batch_data.view(self.batch_size, num_batches, 2, self.max_seq_len)
+        return batch_data.view(num_batches, self.batch_size, 2, self.max_seq_len)
