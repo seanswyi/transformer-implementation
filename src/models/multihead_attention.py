@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 
 def attention(q, k, v, d_k=512, mask=False):
-    qk = torch.matmul(q, k.T)
+    qk = torch.matmul(q, k.transpose(2, 1))
     qk /= np.sqrt(d_k)
 
     if mask:
@@ -13,7 +13,7 @@ def attention(q, k, v, d_k=512, mask=False):
         mask_matrix = torch.tril(ones)
         qk *= mask_matrix
 
-    qk = F.softmax(qk, dim=0)
+    qk = F.softmax(qk, dim=1)
     output = torch.matmul(qk, v)
 
     return output
