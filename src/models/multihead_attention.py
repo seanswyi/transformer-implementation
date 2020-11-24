@@ -51,7 +51,7 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, q, k, v):
         attention_results = [head(q, k, v) for head in self.attention_heads]
-        attention_concatenated = torch.cat(attention_results, dim=1)
+        attention_concatenated = torch.cat(attention_results, dim=2)
         output = self.WO(attention_concatenated)
 
         return output
