@@ -10,4 +10,4 @@ Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arx
 - [ ] Implement data parallelism to speed up process.
 - [ ] Implement BLEU score.
 - [ ] Implement evaluation code.
-- [ ] Visualzie results using [W&B](https://www.wandb.com/) or another tool.
+- [ ] Visualize results using [W&B](https://www.wandb.com/) or another tool.
