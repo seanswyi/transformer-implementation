@@ -32,7 +32,7 @@ def train(args, model, data):
         step_loss = 0.0
 
         # progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
-        for batch in tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data)):
+        for idx, batch in enumerate(tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))):
             optimizer.zero_grad()
 
             src, tgt = batch[:, 0], batch[:, 1]
@@ -54,8 +54,8 @@ def train(args, model, data):
             loss.backward()
             optimizer.step()
 
-        if step % args.log_step == 0:
-            logger.info(f"Step: {step} | Loss: {step_loss} | LR: {learning_rate}")
+            if idx % args.log_step == 0:
+                logger.info(f"Step: {step} | Idx: {idx} | Loss: {step_loss} | LR: {learning_rate}")
 
     return 0
 
