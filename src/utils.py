@@ -1,4 +1,6 @@
 import numpy as np
+from sacrebleu import sentence_bleu
+import torch.nn.functional as F
 
 
 def adjust_learning_rate(step_num, args):
@@ -7,6 +9,20 @@ def adjust_learning_rate(step_num, args):
     term2 = min(np.power(step_num, -0.5), step_num * np.power(args.warmup_steps, -1.5))
 
     return term1 * term2
+
+
+def calculate_bleu(output, targets, tokenizer):
+    output_probs = F.softmax(output, dim=2)
+    predictions = torch.argmax(output_probs, dim=2).tolist()
+    targets = targets.long().tolist()
+
+    predictions_decoded = [tokenizer.DecodeIds(ids) for ids in predictions]
+    targets_decoded = [tokenizer.DecodeIds(ids) for ids in targets]
+
+    bleu_scores = [sentence_bleu(prediction, target).score for prediction, target in zip(predictions_decoded, targets_decoded)]
+    final_bleu_score = sum(bleu_scores) / len(predictions)
+
+    return final_bleu_score
 
 
 def print_data_stats(og_data, tokenized_data):
