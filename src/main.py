@@ -24,15 +24,15 @@ def train(args, model, data):
 
     model.train()
 
-    for step in tqdm(iterable=range(args.warmup_steps), desc="Steps", total=args.warmup_steps):
-        learning_rate = adjust_learning_rate(step, args) if args.learning_rate == 0 else 5e-3
+    global_progress_bar = tqdm(iterable=range(args.warmup_steps), desc="Steps", total=args.warmup_steps)
+    for step in global_progress_bar:
+        learning_rate = adjust_learning_rate(step, args) if args.learning_rate == 0 else args.learning_rate
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(params=model.parameters(), lr=learning_rate)
 
-        step_loss = 0.0
-
-        # progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
-        for idx, batch in enumerate(tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))):
+        progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
+        for idx, batch in enumerate(progress_bar):
+            step_loss = 0.0
             optimizer.zero_grad()
 
             src, tgt = batch[:, 0], batch[:, 1]
