@@ -10,7 +10,7 @@ Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arx
 - [x] ~~Implement data parallelism to speed up process.~~ (Dec. 1st, 2020)
 - [x] ~~Implement BLEU score.~~ (Dec. 1st, 2020)
 - [x] ~~Implement evaluation code.~~ (Dec. 1st, 2020)
-- [x] Visualize results using [W&B](https://www.wandb.com/) or another tool. (Dec. 1st, 2020)
+- [x] ~~Visualize results using [W&B](https://www.wandb.com/) or another tool.~~ (Dec. 1st, 2020)
 - [ ] Modify code so that warmup steps are properly implemented as "iterations" rather than "epochs."
 - [ ] Modify code so that you're observing the "epoch loss" as well as the "iteration loss."
 - [ ] Fix code so that weights are shared among input, output embeddings and pre-softmax linear layer.
