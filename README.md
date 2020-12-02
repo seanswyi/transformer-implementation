@@ -8,6 +8,7 @@ Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arx
 ### To-Do.
 
 - [ ] Fix code so that weights are shared among input, output embeddings and pre-softmax linear layer.
+- [ ] Modify code so that warmup steps are properly implemented as "iterations" rather than "epochs."
 - [x] ~~Implement data parallelism to speed up process.~~ (Dec. 1st, 2020)
 - [x] ~~Implement BLEU score.~~ (Dec. 1st, 2020)
 - [x] ~~Implement evaluation code.~~ (Dec. 1st, 2020)
