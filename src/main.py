@@ -69,6 +69,9 @@ def train(args, model, data):
 
         wandb.log({'epoch_loss': epoch_loss})
 
+        if args.evaluate_during_training:
+            evaluate(args, model, data, data.tokenizer)
+
     return 0
 
 
@@ -92,6 +95,7 @@ def evaluate(args, model, data, tokenizer):
             bleu_score = calculate_bleu(output, tgt, tokenizer)
 
             if step % args.log_step == 0:
+                wandb.log({'BLEU': bleu_score})
                 logger.info(f"Step: {step} | BLEU: {bleu_score}")
 
 
