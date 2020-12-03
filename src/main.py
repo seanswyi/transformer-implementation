@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm
+import wandb
 
 from data import WMT2014Dataset
 from models.transformer import Transformer
@@ -24,14 +25,16 @@ def train(args, model, data):
 
     model.train()
 
-    global_progress_bar = tqdm(iterable=range(args.warmup_steps), desc="Steps", total=args.warmup_steps)
-    for step in global_progress_bar:
-        learning_rate = adjust_learning_rate(step, args) if args.learning_rate == 0 else args.learning_rate
+    epoch_progress_bar = tqdm(iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs)
+    for epoch in epoch_progress_bar:
+        adjusted_lr = adjust_learning_rate(0, args) if args.learning_rate == 0 else args.learning_rate
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(params=model.parameters(), lr=learning_rate)
+        optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
 
-        progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
-        for idx, batch in enumerate(progress_bar):
+        epoch_loss = 0
+
+        step_progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
+        for step, batch in enumerate(step_progress_bar):
             step_loss = 0.0
             optimizer.zero_grad()
 
@@ -50,12 +53,21 @@ def train(args, model, data):
 
             loss = criterion(output.view(-1, args.vocab_size), tgt.view(-1).long())
             step_loss += loss.item()
+            epoch_loss += loss.item()
 
             loss.backward()
             optimizer.step()
 
-            if idx % args.log_step == 0:
-                logger.info(f"Step: {step} | Idx: {idx} | Loss: {step_loss} | LR: {learning_rate}")
+            if step <= args.warmup_steps:
+                adjusted_lr = adjust_learning_rate(step, args)
+                for i in range(len(optimizer.param_groups)):
+                    optimizer.param_groups[i]['lr'] = adjusted_lr
+
+            if step % args.log_step == 0:
+                wandb.log({'step_loss': step_loss, 'lr': adjusted_lr})
+                logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
+
+        wandb.log({'epoch_loss': epoch_loss})
 
     return 0
 
@@ -78,7 +90,9 @@ def evaluate(args, model, data, tokenizer):
 
             output = model(src, tgt_shifted_right)
             bleu_score = calculate_bleu(output, tgt, tokenizer)
-            logger.info(f"Step: {step} | BLEU: {bleu_score}")
+
+            if step % args.log_step == 0:
+                logger.info(f"Step: {step} | BLEU: {bleu_score}")
 
 
 def main(args):
@@ -107,6 +121,7 @@ if __name__ == '__main__':
     parser.add_argument('--beta1', default=0.9, type=float)
     parser.add_argument('--beta2', default=0.98, type=float)
     parser.add_argument('--epsilon', default=10e-9, type=float)
+    parser.add_argument('--evaluate_during_training', action='store_true', default=True)
     parser.add_argument('--data_root', default='../data/', type=str)
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument('--d_ff', default=2048, type=int)
@@ -127,5 +142,7 @@ if __name__ == '__main__':
     parser.add_argument('--tokenizer_filename', default='sentence_piece', type=str)
     parser.add_argument('--warmup_steps', default=4000, type=int)
     args = parser.parse_args()
+
+    wandb.init(project='transformer', config=args)
 
     main(args)
