@@ -19,3 +19,4 @@ Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arx
 - [x] ~~Additionally check if learning rates are properly adjusting.~~ (Dec. 3rd, 2020)
 - [ ] Debug BLEU score. That is, make sure that you're actually calculating correctly.
 - [ ] Debug learning rate scheduling. Refer back to the original paper and check.
+- [ ] After checking performance try adding regularization techniques like Dropout and observe performance.
