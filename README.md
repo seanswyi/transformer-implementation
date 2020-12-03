@@ -15,5 +15,7 @@ Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arx
 - [x] ~~Modify code so that you're observing the "epoch loss" as well as the "iteration loss."~~ (Dec. 3rd, 2020)
 - [x] ~~Fix code so that weights are shared among input, output embeddings and pre-softmax linear layer.~~ (Dec. 3rd, 2020)
 - [x] ~~Add evaluation during training per every <a href="https://www.codecogs.com/eqnedit.php?latex=x" target="_blank"><img src="https://latex.codecogs.com/gif.latex?x" title="x" /></a> steps.~~ (Dec. 3rd, 2020)
-- [ ] Check if model and BLEU scores work properly. :arrow_right: Run code on entire training data instead of `debug` setting.
-- [ ] Additionally check if learning rates are properly decreasing. They may not have to decrease, but I find it strange that they're oscillating.
+- [x] ~~Check if model and BLEU scores work properly. :arrow_right: Run code on entire training data instead of `debug` setting.~~ (Dec. 3rd, 2020)
+- [x] ~~Additionally check if learning rates are properly adjusting.~~ (Dec. 3rd, 2020)
+- [ ] Debug BLEU score. That is, make sure that you're actually calculating correctly.
+- [ ] Debug learning rate scheduling. Refer back to the original paper and check.
