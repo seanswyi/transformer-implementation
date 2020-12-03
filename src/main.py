@@ -64,10 +64,10 @@ def train(args, model, data):
                     optimizer.param_groups[i]['lr'] = adjusted_lr
 
             if step % args.log_step == 0:
-                wandb.log({'step_loss': step_loss, 'lr': adjusted_lr})
+                wandb.log({'step_loss': step_loss, 'lr': adjusted_lr}, step=step)
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
 
-        wandb.log({'epoch_loss': epoch_loss})
+        wandb.log({'epoch_loss': epoch_loss}, step=epoch)
 
         if args.evaluate_during_training:
             evaluate(args, model, data, data.tokenizer)
@@ -95,7 +95,7 @@ def evaluate(args, model, data, tokenizer):
             bleu_score = calculate_bleu(output, tgt, tokenizer)
 
             if step % args.log_step == 0:
-                wandb.log({'BLEU': bleu_score})
+                wandb.log({'BLEU': bleu_score}, step=step)
                 logger.info(f"Step: {step} | BLEU: {bleu_score}")
 
 
