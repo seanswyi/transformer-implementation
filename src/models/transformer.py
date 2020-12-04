@@ -19,22 +19,22 @@ class Transformer(nn.Module):
         self.decoder_stack = nn.ModuleList([Decoder(self.args) for _ in range(self.num_stacks)])
 
     def forward(self, src, tgt):
-        src_emb = self.emb(src.long())
-        tgt_emb = self.emb(tgt.long())
-        encoder_output = self.encode(src_emb)
-        decoder_output = self.decode(tgt_emb, encoder_output)
+        encoder_output = self.encode(src)
+        decoder_output = self.decode(tgt, encoder_output)
         output = torch.matmul(decoder_output, self.emb.embedding_layer.weight.transpose(1, 0))
 
         return output
 
-    def encode(self, src_emb):
+    def encode(self, src):
+        src_emb = self.emb(src.long())
         output = src_emb
         for encoder in self.encoder_stack:
             output = encoder(output)
 
         return output
 
-    def decode(self, tgt_emb, enc_output):
+    def decode(self, tgt, enc_output):
+        tgt_emb = self.emb(tgt.long())
         output = tgt_emb
         for decoder in self.decoder_stack:
             output = decoder(tgt_emb, enc_output)
