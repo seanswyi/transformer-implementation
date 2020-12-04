@@ -12,9 +12,7 @@ def adjust_learning_rate(step_num, args):
     return term1 * term2
 
 
-def calculate_bleu(output, targets, tokenizer):
-    output_probs = F.softmax(output, dim=2)
-    predictions = torch.argmax(output_probs, dim=2).tolist()
+def calculate_bleu(predictions, targets, tokenizer):
     targets = targets.long().tolist()
 
     predictions_decoded = [tokenizer.DecodeIds(ids) for ids in predictions]
