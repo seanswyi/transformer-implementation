@@ -18,6 +18,7 @@ Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arx
 - [x] ~~Check if model and BLEU scores work properly. :arrow_right: Run code on entire training data instead of `debug` setting.~~ (Dec. 3rd, 2020)
 - [x] ~~Additionally check if learning rates are properly adjusting.~~ (Dec. 3rd, 2020)
 - [x] ~~Debug BLEU score. That is, make sure that you're actually calculating correctly.~~ (Dec. 4th, 2020)
-- [ ] Debug evaluation code. Check that you're getting the predictions properly.
-- [ ] Debug learning rate scheduling. Refer back to the original paper and check.
+- [x] ~~Debug evaluation code. Check that you're getting the predictions properly.~~ (Dec. 4th, 2020)
+- [x] ~~Debug learning rate scheduling. Refer back to the original paper and check.~~ (Dec. 4th, 2020)
+- [ ] Check performance of model to make sure everything works properly.
 - [ ] After checking performance try adding regularization techniques like Dropout and observe performance.
