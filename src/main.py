@@ -61,7 +61,7 @@ def train(args, model, data):
             loss.backward()
             optimizer.step()
 
-            adjusted_lr = adjust_learning_rate(step, args)
+            adjusted_lr = adjust_learning_rate(global_step, args)
             for i in range(len(optimizer.param_groups)):
                 optimizer.param_groups[i]['lr'] = adjusted_lr
 
