@@ -30,7 +30,7 @@ def train(args, model, data):
 
     epoch_progress_bar = tqdm(iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs)
     for epoch in epoch_progress_bar:
-        adjusted_lr = adjust_learning_rate(0, args) if args.learning_rate == 0 else args.learning_rate
+        adjusted_lr = adjust_learning_rate(global_step, args)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
 
@@ -159,7 +159,6 @@ if __name__ == '__main__':
     parser.add_argument('--d_k', default=512, type=int)
     parser.add_argument('--d_v', default=512, type=int)
     parser.add_argument('--log_step', default=50, type=int)
-    parser.add_argument('--learning_rate', default=0, type=float)
     parser.add_argument('--multiple_gpu', action='store_true', default=False)
     parser.add_argument('--num_epochs', default=3, type=int)
     parser.add_argument('--num_heads', default=8, type=int)
