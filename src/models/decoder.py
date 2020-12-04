@@ -16,7 +16,7 @@ class Decoder(nn.Module):
         attn_output = self.masked_multihead_attention(x, x, x)
         output1 = self.layernorm(x + attn_output)
 
-        attn_output2 = self.multihead_attention(enc_x, enc_x, x)
+        attn_output2 = self.multihead_attention(x, enc_x, enc_x)
         output2 = self.layernorm(attn_output2 + output1)
 
         output3 = self.layernorm(output2 + self.ffnn(output2))
