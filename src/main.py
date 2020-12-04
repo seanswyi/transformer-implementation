@@ -25,13 +25,15 @@ def train(args, model, data):
 
     model.train()
 
+    global_step = 0
+
     epoch_progress_bar = tqdm(iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs)
     for epoch in epoch_progress_bar:
         adjusted_lr = adjust_learning_rate(0, args) if args.learning_rate == 0 else args.learning_rate
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
 
-        epoch_loss = 0
+        epoch_loss = 0.0
 
         step_progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
         for step, batch in enumerate(step_progress_bar):
@@ -58,21 +60,24 @@ def train(args, model, data):
             loss.backward()
             optimizer.step()
 
-            if step <= args.warmup_steps:
-                adjusted_lr = adjust_learning_rate(step, args)
-                for i in range(len(optimizer.param_groups)):
-                    optimizer.param_groups[i]['lr'] = adjusted_lr
+            adjusted_lr = adjust_learning_rate(step, args)
+            for i in range(len(optimizer.param_groups)):
+                optimizer.param_groups[i]['lr'] = adjusted_lr
 
             if step % args.log_step == 0:
-                wandb.log({'step_loss': step_loss, 'lr': adjusted_lr}, step=step)
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
+
+            wandb.log({'step_loss': step_loss}, step=step)
+            wandb.log({'lr': adjusted_lr}, step=global_step)
+
+            global_step += 1
 
         wandb.log({'epoch_loss': epoch_loss}, step=epoch)
 
         if args.evaluate_during_training:
             evaluate(args, model, data, data.tokenizer)
 
-    return 0
+    return None
 
 
 def evaluate(args, model, data, tokenizer):
@@ -95,8 +100,11 @@ def evaluate(args, model, data, tokenizer):
             bleu_score = calculate_bleu(output, tgt, tokenizer)
 
             if step % args.log_step == 0:
-                wandb.log({'BLEU': bleu_score}, step=step)
                 logger.info(f"Step: {step} | BLEU: {bleu_score}")
+
+            wandb.log({'BLEU': bleu_score}, step=step)
+
+    return None
 
 
 def main(args):
@@ -112,7 +120,7 @@ def main(args):
         model = nn.DataParallel(model)
 
     model = model.to('cuda')
-    results = train(args, model, data)
+    train(args, model, data)
     evaluate(args, model, data, data.tokenizer)
 
     # Run the embedded version into single head attention.
