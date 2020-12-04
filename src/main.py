@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import time
 
 import torch
 import torch.multiprocessing as mp
@@ -89,6 +90,8 @@ def evaluate(args, model, data, tokenizer):
             bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
             tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[:, :-1]
 
+            import pdb; pdb.set_trace()
+
             if torch.cuda.is_available():
                 src = src.to('cuda')
                 tgt = tgt.to('cuda')
@@ -96,8 +99,14 @@ def evaluate(args, model, data, tokenizer):
             else:
                 logger.warning("Not using GPU!")
 
-            output = model(src, tgt_shifted_right)
-            bleu_score = calculate_bleu(output, tgt, tokenizer)
+            predictions = []
+            for i in range(1, data.max_seq_len + 1):
+                output = model(src, tgt_shifted_right[:, :i])
+                probs = F.softmax(output.view(1, -1), dim=1)
+                prediction_value = torch.argmax(probs, dim=1).detach().item()
+                predictions.append(prediction_value)
+
+            bleu_score = calculate_bleu(predictions, tgt, tokenizer)
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | BLEU: {bleu_score}")
@@ -108,6 +117,7 @@ def evaluate(args, model, data, tokenizer):
 
 
 def main(args):
+    global_process_start = time.time()
     msg_format = '[%(asctime)s - %(levelname)s - %(filename)s: %(lineno)d (%(funcName)s)] %(message)s'
     logging.basicConfig(format=msg_format, level=logging.INFO, handlers=[logging.StreamHandler()])
 
@@ -120,11 +130,19 @@ def main(args):
         model = nn.DataParallel(model)
 
     model = model.to('cuda')
-    train(args, model, data)
-    evaluate(args, model, data, data.tokenizer)
 
-    # Run the embedded version into single head attention.
-    import pdb; pdb.set_trace()
+    train_start = time.time()
+    train(args, model, data)
+    train_end = time.time()
+    logger.info(f"Training took approximately {time.strftime('%H:%M:%S', time.gmtime(train_end - train_start))}")
+
+    evaluation_start = time.time()
+    evaluate(args, model, data, data.tokenizer)
+    evaluation_end = time.time()
+    logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
+
+    global_process_end = time.time()
+    logger.info(f"End of process. Took approximately {time.strftime('%H:%M:%S', time.gmtime(global_process_end - global_process_start))}")
 
 
 if __name__ == '__main__':
