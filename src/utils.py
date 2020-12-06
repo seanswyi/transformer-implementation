@@ -13,13 +13,14 @@ def adjust_learning_rate(step_num, args):
 
 
 def calculate_bleu(predictions, targets, tokenizer):
+    predictions = predictions.long().tolist()
     targets = targets.long().tolist()
 
     predictions_decoded = [tokenizer.DecodeIds(ids) for ids in predictions]
     targets_decoded = [tokenizer.DecodeIds(ids) for ids in targets]
 
     bleu_scores = [sentence_bleu(prediction, target).score for prediction, target in zip(predictions_decoded, targets_decoded)]
-    final_bleu_score = sum(bleu_scores) / len(predictions)
+    final_bleu_score = sum(bleu_scores) / len(bleu_scores)
 
     return final_bleu_score
 
