@@ -68,29 +68,33 @@ def train(args, model, data):
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
 
-            wandb.log({'step_loss': step_loss}, step=step)
-            wandb.log({'lr': adjusted_lr}, step=global_step)
+            output_probs = F.softmax(output, dim=2)
+            predictions = torch.argmax(output_probs, dim=2)
+            training_bleu = calculate_bleu(predictions, tgt, data.tokenzier)
+
+            wandb.log({'Step Loss': step_loss}, step=step)
+            wandb.log({'Training BLEU': training_bleu}, step=step)
+            wandb.log({'Learning Rate': adjusted_lr}, step=global_step)
 
             global_step += 1
 
-        wandb.log({'epoch_loss': epoch_loss}, step=epoch)
+        wandb.log({'Epoch Loss': epoch_loss}, step=epoch)
 
         if args.evaluate_during_training:
-            evaluate(args, model, data, data.tokenizer)
+            evaluate(args, model, data, loss)
 
     return None
 
 
-def evaluate(args, model, data, tokenizer):
+def evaluate(args, model, data, loss):
     model.eval()
 
     with torch.no_grad():
+        eval_loss = 0.0
         for step, batch in enumerate(data.valid_data):
             src, tgt = batch[:, 0], batch[:, 1]
             bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
             tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[:, :-1]
-
-            import pdb; pdb.set_trace()
 
             if torch.cuda.is_available():
                 src = src.to('cuda')
@@ -99,19 +103,30 @@ def evaluate(args, model, data, tokenizer):
             else:
                 logger.warning("Not using GPU!")
 
-            predictions = []
-            for i in range(1, data.max_seq_len + 1):
-                output = model(src, tgt_shifted_right[:, :i])
-                probs = F.softmax(output.view(1, -1), dim=1)
-                prediction_value = torch.argmax(probs, dim=1).detach().item()
-                predictions.append(prediction_value)
+            output = model(src, tgt_shifted_right)
+            loss = criterion(output.view(-1, args.vocab_size), tgt.view(-1).long())
+            eval_loss += loss.item()
 
-            bleu_score = calculate_bleu(predictions, tgt, tokenizer)
+            output_probs = F.softmax(output, dim=2)
+            predictions = torch.argmax(output_probs, dim=2)
+            eval_bleu = calculate_bleu(predictions, tgt, data.tokenzier)
+
+            wandb.log({'Eval Loss': eval_loss}, step=step)
+            wandb.log({'Eval BLEU': eval_bleu}, step=step)
+
+            # for i in range(1, data.max_seq_len + 1):
+            #     output = model(src, tgt_shifted_right[:, :i])
+            #     probs = F.softmax(output, dim=2)
+            #     predictions = torch.argmax(probs, dim=2)
+            #     prediction_value = torch.argmax(probs, dim=1).detach().item()
+            #     predictions.append(prediction_value)
+
+            # bleu_score = calculate_bleu(predictions, tgt, tokenizer)
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | BLEU: {bleu_score}")
 
-            wandb.log({'BLEU': bleu_score}, step=step)
+            # wandb.log({'BLEU': bleu_score}, step=step)
 
     return None
 
@@ -172,6 +187,6 @@ if __name__ == '__main__':
     parser.add_argument('--warmup_steps', default=4000, type=int)
     args = parser.parse_args()
 
-    wandb.init(project='transformer', config=args)
+    # wandb.init(project='transformer', config=args)
 
     main(args)
