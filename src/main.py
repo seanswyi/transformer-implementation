@@ -37,6 +37,7 @@ def train(args, model, data):
         epoch_loss = 0.0
 
         step_progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
+        epoch_start_time = time.time()
         for step, batch in enumerate(step_progress_bar):
             step_loss = 0.0
             optimizer.zero_grad()
@@ -70,19 +71,24 @@ def train(args, model, data):
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
-                logger.info(f"Target Sample: {tgt[0].long()}")
-                logger.info(f"Prediction Sample: {predictions[0].long()}")
+                logger.info(f"Target Sample: {tgt[0].detach().long().tolist()}")
+                logger.info(f"Prediction Sample: {predictions[0].detach().long().tolist()}")
 
-            wandb.log({'Step Loss': step_loss}, step=step)
-            wandb.log({'Training BLEU': training_bleu}, step=step)
+            wandb.log({'Step Loss': step_loss}, step=global_step)
+            wandb.log({'Training BLEU': training_bleu}, step=global_step)
             wandb.log({'Learning Rate': adjusted_lr}, step=global_step)
 
             global_step += 1
 
         wandb.log({'Epoch Loss': epoch_loss}, step=epoch)
+        epoch_end_time = time.time()
+        logger.info(f"One training epoch took approximately {time.strftime('%H:%M:%S', time.gmtime(epoch_end_time - epoch_start_time))}")
 
         if args.evaluate_during_training:
+            evaluation_start = time.time()
             evaluate(args, model, data, criterion)
+            evaluation_end = time.time()
+            logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
     return None
 
@@ -91,8 +97,9 @@ def evaluate(args, model, data, criterion):
     model.eval()
 
     with torch.no_grad():
-        eval_loss = 0.0
         for step, batch in enumerate(data.valid_data):
+            eval_loss = 0.0
+
             src, tgt = batch[:, 0], batch[:, 1]
             bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
             tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[:, :-1]
@@ -117,8 +124,8 @@ def evaluate(args, model, data, criterion):
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | BLEU: {eval_bleu}")
-                logger.info(f"Target Sample: {tgt[0].long()}")
-                logger.info(f"Prediction Sample: {predictions[0].long()}")
+                logger.info(f"Target Sample: {tgt[0].detach().long().tolist()}")
+                logger.info(f"Prediction Sample: {predictions[0].detach().long().tolist()}")
 
     return None
 
@@ -142,11 +149,6 @@ def main(args):
     train(args, model, data)
     train_end = time.time()
     logger.info(f"Training took approximately {time.strftime('%H:%M:%S', time.gmtime(train_end - train_start))}")
-
-    evaluation_start = time.time()
-    evaluate(args, model, data, data.tokenizer)
-    evaluation_end = time.time()
-    logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
     global_process_end = time.time()
     logger.info(f"End of process. Took approximately {time.strftime('%H:%M:%S', time.gmtime(global_process_end - global_process_start))}")
