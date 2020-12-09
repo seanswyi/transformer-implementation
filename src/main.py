@@ -26,6 +26,8 @@ def train(args, model, data):
 
     model.train()
 
+    wandb.watch(model)
+
     global_step = 0
 
     epoch_progress_bar = tqdm(iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs)
@@ -119,8 +121,8 @@ def evaluate(args, model, data, criterion):
             predictions = torch.argmax(output_probs, dim=2)
             eval_bleu = calculate_bleu(predictions, tgt, data.tokenizer)
 
-            wandb.log({'Eval Loss': eval_loss}, step=step)
-            wandb.log({'Eval BLEU': eval_bleu}, step=step)
+            wandb.log({'Eval Loss': eval_loss, 'Step': step})
+            wandb.log({'Eval BLEU': eval_bleu, 'Step': step})
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | BLEU: {eval_bleu}")
