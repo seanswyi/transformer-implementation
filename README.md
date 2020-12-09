@@ -22,5 +22,6 @@ Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arx
 - [x] ~~Debug evaluation code. Make it so that you're getting predictions properly.~~ (Dec. 7th, 2020)
 - [x] ~~Modify code so that you're plotting evaluation loss as well.~~ (Dec. 7th, 2020)
 - [x] ~~Check performance of model to make sure everything works properly.~~ (Dec. 9th, 2020)
+- [ ] Configure W&B so that you're getting plots per epoch.
 - [ ] After checking performance try adding regularization techniques like Dropout and observe performance.
 - [ ] Add plots to REARDME file.
