@@ -19,7 +19,6 @@ logger = logging.getLogger()
 
 
 def train(args, model, data):
-    wandb.watch(model)
     if torch.cuda.is_available():
         model = model.to('cuda')
     else:
@@ -95,7 +94,6 @@ def train(args, model, data):
 
 
 def evaluate(args, model, data, criterion):
-    wandb.watch(model)
     model.eval()
 
     with torch.no_grad():
@@ -133,6 +131,7 @@ def evaluate(args, model, data, criterion):
 
 
 def main(args):
+    wandb.init(project='transformer', config=args)
     global_process_start = time.time()
     msg_format = '[%(asctime)s - %(levelname)s - %(filename)s: %(lineno)d (%(funcName)s)] %(message)s'
     logging.basicConfig(format=msg_format, level=logging.INFO, handlers=[logging.StreamHandler()])
@@ -183,7 +182,5 @@ if __name__ == '__main__':
     parser.add_argument('--tokenizer_filename', default='sentence_piece', type=str)
     parser.add_argument('--warmup_steps', default=4000, type=int)
     args = parser.parse_args()
-
-    wandb.init(project='transformer', config=args)
 
     main(args)
