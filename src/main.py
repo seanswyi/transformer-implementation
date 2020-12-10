@@ -26,8 +26,6 @@ def train(args, model, data):
 
     model.train()
 
-    wandb.watch(model)
-
     global_step = 0
 
     epoch_progress_bar = tqdm(iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs)
@@ -139,6 +137,7 @@ def main(args):
 
     data = WMT2014Dataset(args)
     model = Transformer(args)
+    wandb.watch(model)
 
     if args.multiple_gpu:
         logger.info("Using multiple GPU's!")
