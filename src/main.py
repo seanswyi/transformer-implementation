@@ -19,6 +19,7 @@ logger = logging.getLogger()
 
 
 def train(args, model, data):
+    wandb.watch(model)
     if torch.cuda.is_available():
         model = model.to('cuda')
     else:
@@ -94,6 +95,7 @@ def train(args, model, data):
 
 
 def evaluate(args, model, data, criterion):
+    wandb.watch(model)
     model.eval()
 
     with torch.no_grad():
@@ -137,7 +139,6 @@ def main(args):
 
     data = WMT2014Dataset(args)
     model = Transformer(args)
-    wandb.watch(model)
 
     if args.multiple_gpu:
         logger.info("Using multiple GPU's!")
@@ -145,6 +146,7 @@ def main(args):
         model = nn.DataParallel(model)
 
     model = model.to('cuda')
+    wandb.watch(model)
 
     train_start = time.time()
     train(args, model, data)
