@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import logging
 import os
 import time
@@ -13,7 +14,7 @@ import wandb
 
 from data import WMT2014Dataset
 from models.transformer import Transformer
-from utils import adjust_learning_rate, calculate_bleu
+from utils import adjust_learning_rate, calculate_bleu, decode_autoregressive
 
 logger = logging.getLogger()
 
@@ -65,14 +66,17 @@ def train(args, model, data):
             for i in range(len(optimizer.param_groups)):
                 optimizer.param_groups[i]['lr'] = adjusted_lr
 
+            decoded_outputs = decode_autoregressive(model=model, src=src)
+            training_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=tokenizer)
+
             output_probs = F.softmax(output, dim=2)
             predictions = torch.argmax(output_probs, dim=2)
-            training_bleu = calculate_bleu(predictions, tgt, data.tokenizer)
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
                 logger.info(f"Target Sample: {tgt[0].detach().long().tolist()}")
                 logger.info(f"Prediction Sample: {predictions[0].detach().long().tolist()}")
+                logger.info(f"Autoregressive Output Sample: {decoded_outputs[0].detach().long().tolist()}")
 
             wandb.log({'Step Loss': step_loss}, step=global_step)
             wandb.log({'Training BLEU': training_bleu}, step=global_step)
@@ -86,46 +90,40 @@ def train(args, model, data):
 
         if args.evaluate_during_training:
             evaluation_start = time.time()
-            evaluate(args, model, data, criterion)
+            evaluate(args, model, data)
             evaluation_end = time.time()
             logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
     return None
 
 
-def evaluate(args, model, data, criterion):
+def evaluate(args, model, data):
+    valid_data = data.valid_data
+    tokenizer = data.tokenizer
     model.eval()
 
-    with torch.no_grad():
-        for step, batch in enumerate(data.valid_data):
-            eval_loss = 0.0
+    eval_progress_bar = tqdm(iterable=valid_data, desc="Evaluating", total=len(valid_data))
 
+    with torch.no_grad():
+        for step, batch in enumerate(eval_progress_bar):
             src, tgt = batch[:, 0], batch[:, 1]
-            bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
-            tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[:, :-1]
 
             if torch.cuda.is_available():
                 src = src.to('cuda')
                 tgt = tgt.to('cuda')
-                tgt_shifted_right = tgt_shifted_right.to('cuda')
             else:
                 logger.warning("Not using GPU!")
 
-            output = model(src, tgt_shifted_right)
-            loss = criterion(output.view(-1, args.vocab_size), tgt.view(-1).long())
-            eval_loss += loss.item()
+            decoded_outputs = decode_autoregressive(model=model, src=src)
+            eval_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=tokenizer)
 
-            output_probs = F.softmax(output, dim=2)
-            predictions = torch.argmax(output_probs, dim=2)
-            eval_bleu = calculate_bleu(predictions, tgt, data.tokenizer)
-
-            wandb.log({'Eval Loss': eval_loss, 'Step': step})
+            # wandb.log({'Eval Loss': eval_loss, 'Step': step})
             wandb.log({'Eval BLEU': eval_bleu, 'Step': step})
 
             if step % args.log_step == 0:
-                logger.info(f"Step: {step} | BLEU: {eval_bleu}")
+                logger.info(f"Step: {step} | Avg. BLEU: {eval_bleu}")
                 logger.info(f"Target Sample: {tgt[0].detach().long().tolist()}")
-                logger.info(f"Prediction Sample: {predictions[0].detach().long().tolist()}")
+                logger.info(f"Prediction Sample: {decoded_outputs[0].detach().long().tolist()}")
 
     return None
 
@@ -144,7 +142,7 @@ def main(args):
         model = nn.DataParallel(model)
 
     model = model.to('cuda')
-    wandb.watch(model)
+    # wandb.watch(model)
 
     train_start = time.time()
     train(args, model, data)
@@ -179,9 +177,13 @@ if __name__ == '__main__':
     parser.add_argument('--tgt_valid_file', default='../data/valid.fr-en_preprocessed.en', type=str)
     parser.add_argument('--vocab_size', default=20000, type=int)
     parser.add_argument('--tokenizer_filename', default='sentence_piece', type=str)
+    parser.add_argument('--wandb_name', default='', type=str)
     parser.add_argument('--warmup_steps', default=4000, type=int)
     args = parser.parse_args()
 
-    wandb.init(project='transformer', config=args)
+    if args.wandb_name:
+        wandb.init(project='transformer', name=args.wandb_name, config=args)
+    else:
+        wandb.init(project='transformer', config=args)
 
     main(args)
