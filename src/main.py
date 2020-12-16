@@ -67,7 +67,7 @@ def train(args, model, data):
                 optimizer.param_groups[i]['lr'] = adjusted_lr
 
             decoded_outputs = decode_autoregressive(model=model, src=src)
-            training_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=tokenizer)
+            training_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=data.tokenizer)
 
             output_probs = F.softmax(output, dim=2)
             predictions = torch.argmax(output_probs, dim=2)
