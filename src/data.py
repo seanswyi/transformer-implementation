@@ -19,11 +19,6 @@ class WMT2014Dataset():
         ############# Load raw data. ####################################################################################
         self.train_data = self.load(mode='train')
         self.valid_data = self.load(mode='valid')
-
-        # If debug argument is set only use 100 samples.
-        if self.args.debug:
-            self.train_data = self.train_data[:100]
-            self.valid_data = self.valid_data[:100]
         #################################################################################################################
 
         ############# Load/train tokenizer. #############################################################################
@@ -69,21 +64,25 @@ class WMT2014Dataset():
         if mode == 'train':
             logger.info("Loading src and tgt from %s | %s" % (self.args.src_train_file, self.args.tgt_train_file))
             with open(file=self.args.src_train_file, mode='r', encoding='utf-8') as f:
-                src_data = [line.lower().strip() for line in f.readlines()]
+                self.src_data = [line.lower().strip() for line in f.readlines()]
 
             with open(file=self.args.tgt_train_file, mode='r', encoding='utf-8') as f:
-                tgt_data = [line.lower().strip() for line in f.readlines()]
+                self.tgt_data = [line.lower().strip() for line in f.readlines()]
         elif mode == 'valid':
             logger.info("Loading src and tgt from %s | %s" % (self.args.src_valid_file, self.args.tgt_valid_file))
             with open(file=self.args.src_valid_file, mode='r', encoding='utf-8') as f:
-                src_data = [line.lower().strip() for line in f.readlines()]
+                self.src_data = [line.lower().strip() for line in f.readlines()]
 
             with open(file=self.args.tgt_valid_file, mode='r', encoding='utf-8') as f:
-                tgt_data = [line.lower().strip() for line in f.readlines()]
+                self.tgt_data = [line.lower().strip() for line in f.readlines()]
         else:
             raise NotImplementedError
 
-        return [[src, tgt] for src, tgt in zip(src_data, tgt_data)]
+        if self.args.debug:
+            self.src_data = self.src_data[:100]
+            self.tgt_data = self.tgt_data[:100]
+
+        return [[src, tgt] for src, tgt in zip(self.src_data, self.tgt_data)]
 
     def tokenize(self, mode='train'):
         if mode == 'train':
