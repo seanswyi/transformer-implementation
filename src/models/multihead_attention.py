@@ -15,14 +15,14 @@ def attention(q, k, v, d_k=512, mask=False):
 
     if mask:
         ones = torch.ones(size=qk.shape)
-        mask_matrix = torch.tril(ones)
+        mask_matrix = torch.triu(ones, diagonal=1) * (-1e9)
 
         if qk.is_cuda:
             mask_matrix = mask_matrix.to('cuda')
         else:
             logger.warning("Not using GPU!")
 
-        qk *= mask_matrix
+        qk += mask_matrix
 
     qk = F.softmax(qk, dim=1)
     output = torch.matmul(qk, v)
