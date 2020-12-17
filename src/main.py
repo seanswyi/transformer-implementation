@@ -20,6 +20,8 @@ logger = logging.getLogger()
 
 
 def train(args, model, data):
+    tokenizer = data.tokenizer
+
     if torch.cuda.is_available():
         model = model.to('cuda')
     else:
@@ -66,20 +68,20 @@ def train(args, model, data):
             for i in range(len(optimizer.param_groups)):
                 optimizer.param_groups[i]['lr'] = adjusted_lr
 
-            decoded_outputs = decode_autoregressive(model=model, src=src)
-            training_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=data.tokenizer)
+            # decoded_outputs = decode_autoregressive(model=model, src=src)
+            # training_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=data.tokenizer)
 
             output_probs = F.softmax(output, dim=2)
             predictions = torch.argmax(output_probs, dim=2)
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
-                logger.info(f"Target Sample: {tgt[0].detach().long().tolist()}")
-                logger.info(f"Prediction Sample: {predictions[0].detach().long().tolist()}")
-                logger.info(f"Autoregressive Output Sample: {decoded_outputs[0].detach().long().tolist()}")
+                logger.info(f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}")
+                logger.info(f"Prediction Sample: {tokenizer.DecodeIds(predictions[0].detach().long().tolist())}")
+                # logger.info(f"Autoregressive Output Sample: {decoded_outputs[0].detach().long().tolist()}")
 
             wandb.log({'Step Loss': step_loss}, step=global_step)
-            wandb.log({'Training BLEU': training_bleu}, step=global_step)
+            # # wandb.log({'Training BLEU': training_bleu}, step=global_step)
             wandb.log({'Learning Rate': adjusted_lr}, step=global_step)
 
             global_step += 1
@@ -117,13 +119,12 @@ def evaluate(args, model, data):
             decoded_outputs = decode_autoregressive(model=model, src=src)
             eval_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=tokenizer)
 
-            # wandb.log({'Eval Loss': eval_loss, 'Step': step})
             wandb.log({'Eval BLEU': eval_bleu, 'Step': step})
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | Avg. BLEU: {eval_bleu}")
-                logger.info(f"Target Sample: {tgt[0].detach().long().tolist()}")
-                logger.info(f"Prediction Sample: {decoded_outputs[0].detach().long().tolist()}")
+                logger.info(f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}")
+                logger.info(f"Prediction Sample: {tokenizer.DecodeIds(decoded_outputs[0].detach().long().tolist())}")
 
     return None
 
@@ -142,7 +143,7 @@ def main(args):
         model = nn.DataParallel(model)
 
     model = model.to('cuda')
-    # wandb.watch(model)
+    wandb.watch(model)
 
     train_start = time.time()
     train(args, model, data)
@@ -155,7 +156,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=1, type=int)
+    parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--beta1', default=0.9, type=float)
     parser.add_argument('--beta2', default=0.98, type=float)
     parser.add_argument('--epsilon', default=10e-9, type=float)
@@ -167,6 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--d_k', default=512, type=int)
     parser.add_argument('--d_v', default=512, type=int)
     parser.add_argument('--log_step', default=50, type=int)
+    parser.add_argument('--max_seq_len', type=int)
     parser.add_argument('--multiple_gpu', action='store_true', default=False)
     parser.add_argument('--num_epochs', default=3, type=int)
     parser.add_argument('--num_heads', default=8, type=int)
