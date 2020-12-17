@@ -42,7 +42,11 @@ class WMT2014Dataset():
 
         src_train_longest = max([len(x[0]) for x in self.train_tokenized_data])
         tgt_train_longest = max([len(x[1]) for x in self.train_tokenized_data])
-        self.max_seq_len = max(src_train_longest, tgt_train_longest)
+
+        if self.args.max_seq_len:
+            self.max_seq_len = self.args.max_seq_len
+        else:
+            self.max_seq_len = max(src_train_longest, tgt_train_longest)
 
         self.src_train_data, self.tgt_train_data = self.process(self.train_tokenized_data)
         self.src_valid_data, self.tgt_valid_data = self.process(self.valid_tokenized_data)
@@ -105,9 +109,16 @@ class WMT2014Dataset():
 
         assert src_data_template.shape == tgt_data_template.shape, "src and tgt are different shapes!"
 
+        count = 0
         for i in range(src_data_template.shape[0]):
-            src_data_template[i][:len(src_data[i])] = src_data[i]
-            tgt_data_template[i][:len(tgt_data[i])] = tgt_data[i]
+            try:
+                src_data_template[i][:len(src_data[i])] = src_data[i]
+                tgt_data_template[i][:len(tgt_data[i])] = tgt_data[i]
+            except ValueError:
+                count += 1
+                continue
+
+        logger.info(f"{count} samples were discarded due to length.")
 
         return src_data_template, tgt_data_template
 
