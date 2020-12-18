@@ -4,4 +4,7 @@ debug:
 
 
 run:
-	python ./main.py --max_seq_len 50 --wandb_name transformer
+	python ./main.py --max_seq_len 50 --multiple_gpu --wandb_name transformer
+
+run_single_gpu:
+	python ./main.py --max_seq_len 50 --wandb_name transformer-single-gpu
