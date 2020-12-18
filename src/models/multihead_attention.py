@@ -24,7 +24,7 @@ def attention(q, k, v, d_k=512, mask=False):
 
         qk += mask_matrix
 
-    qk = F.softmax(qk, dim=1)
+    qk = F.softmax(qk, dim=-1)
     output = torch.matmul(qk, v)
 
     return output
