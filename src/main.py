@@ -161,7 +161,7 @@ def main(args):
 
 if __name__ == '__main__':
     right_now = time.time()
-    timestamp = datetime.fromtimestamp(right_now).strftime(fmt='%m%d%Y-%H%M')
+    timestamp = datetime.fromtimestamp(right_now).strftime('%m%d%Y-%H%M')
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', default=128, type=int)
