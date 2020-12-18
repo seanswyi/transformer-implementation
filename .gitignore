@@ -4,3 +4,4 @@ __pycache__/
 *.xml
 train.tags.*
 wandb/
+logs/
