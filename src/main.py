@@ -154,8 +154,8 @@ def main(args):
     train_end = time.time()
     logger.info(f"Training took approximately {time.strftime('%H:%M:%S', time.gmtime(train_end - train_start))}")
 
-    import pdb; pdb.set_trace()
-    model_save_file = os.path.join(args.model_save_dir, args.log_filename)
+    model_file_name = args.log_filename.split('/')[-1]
+    model_save_file = os.path.join(args.model_save_dir, model_file_name)
     logger.info(f"Saving model in {args.model_save_dir} as {args.log_filename}")
     torch.save(model.state_dict(), model_save_file)
 
@@ -201,7 +201,7 @@ if __name__ == '__main__':
         args.log_filename = f"../logs/{args.wandb_name}_{timestamp}"
         wandb.init(project='transformer', name=args.wandb_name, config=args)
     else:
-        args.log_filename = f"../logs/{args.timestamp}"
+        args.log_filename = f"../logs/{timestamp}"
         wandb.init(project='transformer', config=args)
 
     main(args)
