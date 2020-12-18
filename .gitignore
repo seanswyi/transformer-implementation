@@ -5,3 +5,4 @@ __pycache__/
 train.tags.*
 wandb/
 logs/
+src/saved_models/
