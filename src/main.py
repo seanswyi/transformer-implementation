@@ -1,5 +1,5 @@
 import argparse
-import datetime
+from datetime import datetime
 import logging
 import os
 import time
@@ -132,7 +132,8 @@ def evaluate(args, model, data):
 def main(args):
     global_process_start = time.time()
     msg_format = '[%(asctime)s - %(levelname)s - %(filename)s: %(lineno)d (%(funcName)s)] %(message)s'
-    logging.basicConfig(format=msg_format, level=logging.INFO, handlers=[logging.StreamHandler()])
+    logging.basicConfig(filename=args.log_filename, format=msg_format, level=logging.INFO, \
+        handlers=[logging.StreamHandler(), logging.FileHandler()])
 
     data = WMT2014Dataset(args)
     model = Transformer(args)
@@ -150,11 +151,18 @@ def main(args):
     train_end = time.time()
     logger.info(f"Training took approximately {time.strftime('%H:%M:%S', time.gmtime(train_end - train_start))}")
 
+    model_save_file = os.path.join(args.model_save_dir, args.log_filename)
+    logger.info(f"Saving model in {args.model_save_dir} as {args.log_filename}")
+    torch.save(model.state_dict(), model_save_file)
+
     global_process_end = time.time()
     logger.info(f"End of process. Took approximately {time.strftime('%H:%M:%S', time.gmtime(global_process_end - global_process_start))}")
 
 
 if __name__ == '__main__':
+    right_now = time.time()
+    timestamp = datetime.fromtimestamp(right_now).strftime(fmt='%m%d%Y-%H%M')
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--beta1', default=0.9, type=float)
@@ -167,8 +175,10 @@ if __name__ == '__main__':
     parser.add_argument('--d_model', default=512, type=int)
     parser.add_argument('--d_k', default=512, type=int)
     parser.add_argument('--d_v', default=512, type=int)
+    parser.add_argument('--log_filename', default='', type=str)
     parser.add_argument('--log_step', default=50, type=int)
     parser.add_argument('--max_seq_len', type=int)
+    parser.add_argument('--model_save_dir', default='./saved_models', type=str)
     parser.add_argument('--multiple_gpu', action='store_true', default=False)
     parser.add_argument('--num_epochs', default=3, type=int)
     parser.add_argument('--num_heads', default=8, type=int)
@@ -184,8 +194,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.wandb_name:
+        args['log_filename'] = f"{args.wandb_name}_{timestamp}"
         wandb.init(project='transformer', name=args.wandb_name, config=args)
     else:
+        args['log_filename'] = args.wandb_name
         wandb.init(project='transformer', config=args)
 
     main(args)
