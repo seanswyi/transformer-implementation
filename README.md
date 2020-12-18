@@ -24,6 +24,7 @@ Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arx
 - [x] ~~Check performance of model to make sure everything works properly.~~ (Dec. 9th, 2020)
 - [x] ~~Configure W&B so that you're also getting gradient information and inspect that your network is training properly.~~ (Dec. 10th, 2020)
 - [x] ~~Modify evaluation decoding so that it's autoregressive.~~ (Dec. 15th, 2020)
+- [x] ~~Fix masked attention to use `torch.triu` and add instead of `torch.tril` and multiply. The difference is in the softmax operation later.~~ (Dec. 17th, 2020)
 - [ ] Add beam search.
 - [ ] After checking performance try adding regularization techniques like Dropout and observe performance.
 - [ ] Add plots to REARDME file.
