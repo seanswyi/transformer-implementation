@@ -18,6 +18,8 @@ class Transformer(nn.Module):
         self.encoder_stack = nn.ModuleList([Encoder(self.args) for _ in range(self.num_stacks)])
         self.decoder_stack = nn.ModuleList([Decoder(self.args) for _ in range(self.num_stacks)])
 
+        self.dropout = nn.Dropout(p=0.1)
+
     def forward(self, src, tgt):
         encoder_output = self.encode(src)
         decoder_output = self.decode(tgt, encoder_output)
@@ -27,7 +29,7 @@ class Transformer(nn.Module):
 
     def encode(self, src):
         src_emb = self.emb(src.long())
-        output = src_emb
+        output = self.dropout(src_emb)
         for encoder in self.encoder_stack:
             output = encoder(output)
 
@@ -35,7 +37,7 @@ class Transformer(nn.Module):
 
     def decode(self, tgt, enc_output):
         tgt_emb = self.emb(tgt.long())
-        output = tgt_emb
+        output = self.dropout(tgt_emb)
         for decoder in self.decoder_stack:
             output = decoder(tgt_emb, enc_output)
 
