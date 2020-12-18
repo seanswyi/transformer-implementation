@@ -4,5 +4,4 @@ debug:
 
 
 run:
-	wandb on;
-	python ./main.py --max_seq_len 50
+	python ./main.py --max_seq_len 50 --wandb_name transformer
