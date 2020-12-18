@@ -76,7 +76,10 @@ def train(args, model, data):
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
+                logger.info(f"Target Sample Tokens: {tgt[0].detach().long().tolist()}")
+                logger.info(f"Target Shifted Right Tokens: {tgt_shifted_right[0].detach().long().tolist()}")
                 logger.info(f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}")
+                logger.info(f"Prediction Sample Tokens: {predictions[0].detach().long().tolist()}")
                 logger.info(f"Prediction Sample: {tokenizer.DecodeIds(predictions[0].detach().long().tolist())}")
                 # logger.info(f"Autoregressive Output Sample: {decoded_outputs[0].detach().long().tolist()}")
 
@@ -132,8 +135,8 @@ def evaluate(args, model, data):
 def main(args):
     global_process_start = time.time()
     msg_format = '[%(asctime)s - %(levelname)s - %(filename)s: %(lineno)d (%(funcName)s)] %(message)s'
-    logging.basicConfig(filename=args.log_filename, format=msg_format, level=logging.INFO, \
-        handlers=[logging.StreamHandler(), logging.FileHandler()])
+    logging.basicConfig(format=msg_format, level=logging.INFO, \
+        handlers=[logging.FileHandler(filename=args.log_filename), logging.StreamHandler()])
 
     data = WMT2014Dataset(args)
     model = Transformer(args)
@@ -151,6 +154,7 @@ def main(args):
     train_end = time.time()
     logger.info(f"Training took approximately {time.strftime('%H:%M:%S', time.gmtime(train_end - train_start))}")
 
+    import pdb; pdb.set_trace()
     model_save_file = os.path.join(args.model_save_dir, args.log_filename)
     logger.info(f"Saving model in {args.model_save_dir} as {args.log_filename}")
     torch.save(model.state_dict(), model_save_file)
@@ -194,10 +198,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.wandb_name:
-        args['log_filename'] = f"{args.wandb_name}_{timestamp}"
+        args.log_filename = f"../logs/{args.wandb_name}_{timestamp}"
         wandb.init(project='transformer', name=args.wandb_name, config=args)
     else:
-        args['log_filename'] = args.wandb_name
+        args.log_filename = f"../logs/{args.timestamp}"
         wandb.init(project='transformer', config=args)
 
     main(args)
