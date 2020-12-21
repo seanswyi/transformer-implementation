@@ -9,7 +9,7 @@ import torch.nn.functional as F
 logger = logging.getLogger()
 
 
-def attention(q, k, v, d_k=512, mask=False):
+def attention(q, k, v, d_k, dropout=None, mask=False):
     qk = torch.matmul(q, k.transpose(2, 1))
     qk /= np.sqrt(d_k)
 
@@ -25,6 +25,10 @@ def attention(q, k, v, d_k=512, mask=False):
         qk += mask_matrix
 
     qk = F.softmax(qk, dim=-1)
+
+    if dropout:
+        qk = dropout(qk)
+
     output = torch.matmul(qk, v)
 
     return output
@@ -35,17 +39,29 @@ class SingleHeadAttention(nn.Module):
         super(SingleHeadAttention, self).__init__()
 
         self.mask = mask
+        self.d_model = args.d_model
+        self.num_heads = args.num_heads
 
-        self.WQ = nn.Linear(in_features=args.d_model, out_features=args.d_k)
-        self.WK = nn.Linear(in_features=args.d_model, out_features=args.d_k)
-        self.WV = nn.Linear(in_features=args.d_model, out_features=args.d_v)
+        self.d_q = int(self.d_model / self.num_heads)
+        self.d_k = int(self.d_model / self.num_heads)
+        self.d_v = int(self.d_model / self.num_heads)
+
+        self.WQ = nn.Linear(in_features=self.d_model, out_features=self.d_q)
+        self.WK = nn.Linear(in_features=self.d_model, out_features=self.d_k)
+        self.WV = nn.Linear(in_features=self.d_model, out_features=self.d_v)
+
+        nn.init.xavier_uniform_(self.WQ.weight)
+        nn.init.xavier_uniform_(self.WK.weight)
+        nn.init.xavier_uniform_(self.WV.weight)
+
+        self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, q, k, v):
         q = self.WQ(q)
         k = self.WK(k)
         v = self.WV(v)
 
-        output = attention(q, k, v, mask=self.mask)
+        output = attention(q, k, v, d_k=self.d_k, dropout=self.dropout, mask=self.mask)
 
         return output
 
@@ -55,8 +71,12 @@ class MultiHeadAttention(nn.Module):
         super(MultiHeadAttention, self).__init__()
 
         self.mask = mask
+        self.d_model = args.d_model
         self.num_heads = args.num_heads
-        self.WO = nn.Linear(in_features=(self.num_heads * args.d_v), out_features=args.d_model)
+        self.d_v = int(self.d_model / self.num_heads)
+        self.WO = nn.Linear(in_features=(self.num_heads * self.d_v), out_features=self.d_model)
+
+        nn.init.xavier_uniform_(self.WO.weight)
 
         self.attention_heads = nn.ModuleList([SingleHeadAttention(args, mask=self.mask) for _ in range(self.num_heads)])
 

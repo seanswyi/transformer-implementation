@@ -12,9 +12,15 @@ class FeedForwardNN(nn.Module):
 
         self.linear1 = nn.Linear(in_features=self.d_model, out_features=self.d_ff)
         self.linear2 = nn.Linear(in_features=self.d_ff, out_features=self.d_model)
+        self.relu = nn.ReLU()
+
+        # nn.init.xavier_uniform_(self.linear1.weight)
+        # nn.init.xavier_uniform_(self.linear2.weight)
+
+        self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, x):
-        output1 = F.relu(self.linear1(x))
+        output1 = self.dropout(self.relu(self.linear1(x)))
         output2 = self.linear2(output1)
 
         return output2

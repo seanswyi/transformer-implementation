@@ -17,13 +17,16 @@ class Transformer(nn.Module):
         self.emb = EmbeddingLayer(self.args)
         self.encoder_stack = nn.ModuleList([Encoder(self.args) for _ in range(self.num_stacks)])
         self.decoder_stack = nn.ModuleList([Decoder(self.args) for _ in range(self.num_stacks)])
-
+        self.output_linear = nn.Linear(in_features=self.d_model, out_features=self.vocab_size)
+        self.softmax = nn.LogSoftmax(dim=-1)
         self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, src, tgt):
         encoder_output = self.encode(src)
         decoder_output = self.decode(tgt, encoder_output)
+        # output = self.output_linear(decoder_output)
         output = torch.matmul(decoder_output, self.emb.embedding_layer.weight.transpose(1, 0))
+        output = self.softmax(output)
 
         return output
 

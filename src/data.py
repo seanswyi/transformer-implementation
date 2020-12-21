@@ -102,8 +102,8 @@ class WMT2014Dataset():
 
     def process(self, data):
         logger.info("Converting tokenized data into input templates.")
-        src_data = [x[0] for x in data]
-        tgt_data = [x[1] for x in data]
+        src_data = [[self.tokenizer.bos_id()] + x[0] + [self.tokenizer.eos_id()] for x in data]
+        tgt_data = [x[1] + [self.tokenizer.eos_id()] for x in data]
         src_data_template = np.zeros(shape=(len(data), self.max_seq_len))
         tgt_data_template = np.zeros(shape=(len(data), self.max_seq_len))
 

@@ -31,12 +31,12 @@ def train(args, model, data):
 
     global_step = 0
 
+    adjusted_lr = adjust_learning_rate(global_step, args)
+    criterion = nn.NLLLoss(ignore_index=0)
+    optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
+
     epoch_progress_bar = tqdm(iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs)
     for epoch in epoch_progress_bar:
-        adjusted_lr = adjust_learning_rate(global_step, args)
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
-
         epoch_loss = 0.0
 
         step_progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
@@ -48,6 +48,18 @@ def train(args, model, data):
             src, tgt = batch[:, 0], batch[:, 1]
             bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
             tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[:, :-1] # Truncate last token to match size.
+
+            # Skip empty cases.
+            for sample in tgt:
+                if sum(sample).item() == 0:
+                    continue
+
+            # Find case where there is no padding and append EOS token.
+            tgt_shifted_right_last_idxs = tgt_shifted_right[:, -1].long().tolist()
+            nonzero_indices = [idx for idx, x in enumerate(tgt_shifted_right_last_idxs) if x != 0]
+            if nonzero_indices:
+                for idx in nonzero_indices:
+                    tgt_shifted_right[idx][-1] = tokenizer.eos_id()
 
             if torch.cuda.is_available():
                 src = src.to('cuda')
@@ -64,15 +76,12 @@ def train(args, model, data):
             loss.backward()
             optimizer.step()
 
-            adjusted_lr = adjust_learning_rate(global_step, args)
+            adjusted_lr = 0.001 * adjust_learning_rate(global_step, args)
             for i in range(len(optimizer.param_groups)):
                 optimizer.param_groups[i]['lr'] = adjusted_lr
 
-            # decoded_outputs = decode_autoregressive(model=model, src=src)
-            # training_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=data.tokenizer)
-
-            output_probs = F.softmax(output, dim=2)
-            predictions = torch.argmax(output_probs, dim=2)
+            output_probs = F.softmax(output, dim=-1)
+            predictions = torch.argmax(output_probs, dim=-1)
 
             if step % args.log_step == 0:
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
@@ -81,10 +90,8 @@ def train(args, model, data):
                 logger.info(f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}")
                 logger.info(f"Prediction Sample Tokens: {predictions[0].detach().long().tolist()}")
                 logger.info(f"Prediction Sample: {tokenizer.DecodeIds(predictions[0].detach().long().tolist())}")
-                # logger.info(f"Autoregressive Output Sample: {decoded_outputs[0].detach().long().tolist()}")
 
             wandb.log({'Step Loss': step_loss}, step=global_step)
-            # # wandb.log({'Training BLEU': training_bleu}, step=global_step)
             wandb.log({'Learning Rate': adjusted_lr}, step=global_step)
 
             global_step += 1
@@ -95,39 +102,61 @@ def train(args, model, data):
 
         if args.evaluate_during_training:
             evaluation_start = time.time()
-            evaluate(args, model, data)
+            evaluate(args, model, data, loss)
             evaluation_end = time.time()
             logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
     return None
 
 
-def evaluate(args, model, data):
+def evaluate(args, model, data, criterion):
     valid_data = data.valid_data
     tokenizer = data.tokenizer
     model.eval()
 
     eval_progress_bar = tqdm(iterable=valid_data, desc="Evaluating", total=len(valid_data))
+    eval_loss = 0.0
 
     with torch.no_grad():
         for step, batch in enumerate(eval_progress_bar):
             src, tgt = batch[:, 0], batch[:, 1]
+            bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
+            tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[:, :-1] # Truncate last token to match size.
+
+            # Skip empty cases.
+            for thing in tgt_shifted_right:
+                if sum(thing) == 2:
+                    continue
+
+            # Find case where there is no padding and append EOS token.
+            tgt_shifted_right_last_idxs = tgt_shifted_right[:, -1].long().tolist()
+            nonzero_indices = [x for x in tgt_shifted_right_last_idxs if x != 0]
+            if nonzero_indices:
+                for idx in nonzero_indices:
+                    tgt_shifted_right[idx][-1] = tokenizer.eos_id()
 
             if torch.cuda.is_available():
                 src = src.to('cuda')
                 tgt = tgt.to('cuda')
+                tgt_shifted_right = tgt_shifted_right.to('cuda')
             else:
                 logger.warning("Not using GPU!")
+
+            output = model(src, tgt_shifted_right)
+            loss = criterion(output.view(-1, args.vocab_size), tgt.view(-1).long())
+            eval_loss += loss.item()
 
             decoded_outputs = decode_autoregressive(model=model, src=src)
             eval_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=tokenizer)
 
-            wandb.log({'Eval BLEU': eval_bleu, 'Step': step})
+            wandb.log({'Eval BLEU': eval_bleu})
 
-            if step % args.log_step == 0:
-                logger.info(f"Step: {step} | Avg. BLEU: {eval_bleu}")
-                logger.info(f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}")
-                logger.info(f"Prediction Sample: {tokenizer.DecodeIds(decoded_outputs[0].detach().long().tolist())}")
+            # if step % args.log_step == 0:
+            logger.info(f"Step: {step} | Avg. BLEU: {eval_bleu}")
+            logger.info(f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}")
+            logger.info(f"Prediction Sample: {tokenizer.DecodeIds(decoded_outputs[0].detach().long().tolist())}")
+
+        wandb.log({'Evaluation Loss': eval_loss})
 
     return None
 
@@ -177,14 +206,12 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument('--d_ff', default=2048, type=int)
     parser.add_argument('--d_model', default=512, type=int)
-    parser.add_argument('--d_k', default=512, type=int)
-    parser.add_argument('--d_v', default=512, type=int)
     parser.add_argument('--log_filename', default='', type=str)
     parser.add_argument('--log_step', default=50, type=int)
-    parser.add_argument('--max_seq_len', type=int)
+    parser.add_argument('--max_seq_len', default=50, type=int)
     parser.add_argument('--model_save_dir', default='./saved_models', type=str)
     parser.add_argument('--multiple_gpu', action='store_true', default=False)
-    parser.add_argument('--num_epochs', default=3, type=int)
+    parser.add_argument('--num_epochs', default=50, type=int)
     parser.add_argument('--num_heads', default=8, type=int)
     parser.add_argument('--num_stacks', default=6, type=int)
     parser.add_argument('--src_train_file', default='../data/train.fr-en_preprocessed.fr', type=str)
@@ -196,6 +223,8 @@ if __name__ == '__main__':
     parser.add_argument('--wandb_name', default='', type=str)
     parser.add_argument('--warmup_steps', default=4000, type=int)
     args = parser.parse_args()
+
+    logger.info(args)
 
     if args.wandb_name:
         args.log_filename = f"../logs/{args.wandb_name}_{timestamp}"
