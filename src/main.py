@@ -14,6 +14,7 @@ import wandb
 
 from data import WMT2014Dataset
 from models.transformer import Transformer
+from models.embedding_layer import EmbeddingLayer
 from utils import adjust_learning_rate, calculate_bleu, decode_autoregressive
 
 logger = logging.getLogger()
@@ -46,13 +47,14 @@ def train(args, model, data):
             optimizer.zero_grad()
 
             src, tgt = batch[:, 0], batch[:, 1]
-            bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
-            tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[:, :-1] # Truncate last token to match size.
 
             # Skip empty cases.
             for sample in tgt:
                 if sum(sample).item() == 0:
                     continue
+
+            bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
+            tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[:, :-1] # Truncate last token to match size.
 
             # Find case where there is no padding and append EOS token.
             tgt_shifted_right_last_idxs = tgt_shifted_right[:, -1].long().tolist()
@@ -76,7 +78,7 @@ def train(args, model, data):
             loss.backward()
             optimizer.step()
 
-            adjusted_lr = 0.001 * adjust_learning_rate(global_step, args)
+            adjusted_lr = adjust_learning_rate(global_step, args)
             for i in range(len(optimizer.param_groups)):
                 optimizer.param_groups[i]['lr'] = adjusted_lr
 
@@ -102,7 +104,7 @@ def train(args, model, data):
 
         if args.evaluate_during_training:
             evaluation_start = time.time()
-            evaluate(args, model, data, loss)
+            evaluate(args, model, data, criterion)
             evaluation_end = time.time()
             logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
@@ -130,7 +132,7 @@ def evaluate(args, model, data, criterion):
 
             # Find case where there is no padding and append EOS token.
             tgt_shifted_right_last_idxs = tgt_shifted_right[:, -1].long().tolist()
-            nonzero_indices = [x for x in tgt_shifted_right_last_idxs if x != 0]
+            nonzero_indices = [idx for idx, x in enumerate(tgt_shifted_right_last_idxs) if x != 0]
             if nonzero_indices:
                 for idx in nonzero_indices:
                     tgt_shifted_right[idx][-1] = tokenizer.eos_id()
@@ -218,7 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('--tgt_train_file', default='../data/train.fr-en_preprocessed.en', type=str)
     parser.add_argument('--src_valid_file', default='../data/valid.fr-en_preprocessed.fr', type=str)
     parser.add_argument('--tgt_valid_file', default='../data/valid.fr-en_preprocessed.en', type=str)
-    parser.add_argument('--vocab_size', default=20000, type=int)
+    parser.add_argument('--vocab_size', default=16000, type=int)
     parser.add_argument('--tokenizer_filename', default='sentence_piece', type=str)
     parser.add_argument('--wandb_name', default='', type=str)
     parser.add_argument('--warmup_steps', default=4000, type=int)

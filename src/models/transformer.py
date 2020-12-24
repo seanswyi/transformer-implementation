@@ -21,27 +21,36 @@ class Transformer(nn.Module):
         self.softmax = nn.LogSoftmax(dim=-1)
         self.dropout = nn.Dropout(p=0.1)
 
-    def forward(self, src, tgt):
-        encoder_output = self.encode(src)
-        decoder_output = self.decode(tgt, encoder_output)
-        # output = self.output_linear(decoder_output)
-        output = torch.matmul(decoder_output, self.emb.embedding_layer.weight.transpose(1, 0))
-        output = self.softmax(output)
+        self.encoder = Encoder(self.args)
+        self.two_encoder = nn.Sequential(Encoder(self.args), Encoder(self.args))
 
-        return output
+    def forward(self, src, tgt):
+        src_emb = self.emb(src.long())
+        output1 = self.two_encoder(src_emb)
+        output2 = self.dropout(self.output_linear(output1))
+        return self.softmax(output2)
+
+        # import pdb; pdb.set_trace()
+        # encoder_output = self.encode(src)
+        # decoder_output = self.decode(tgt, encoder_output)
+        # # output = self.output_linear(self.dropout(decoder_output))
+        # output = torch.matmul(decoder_output, self.emb.embedding_layer.weight.transpose(1, 0))
+        # output = self.softmax(output)
+
+        # return output
 
     def encode(self, src):
         src_emb = self.emb(src.long())
-        output = self.dropout(src_emb)
-        for encoder in self.encoder_stack:
-            output = encoder(output)
+        output = src_emb
+        for i in range(self.num_stacks):
+            output = self.encoder_stack[i](output)
 
         return output
 
     def decode(self, tgt, enc_output):
         tgt_emb = self.emb(tgt.long())
-        output = self.dropout(tgt_emb)
-        for decoder in self.decoder_stack:
-            output = decoder(tgt_emb, enc_output)
+        output = tgt_emb
+        for i in range(self.num_stacks):
+            output = self.decoder_stack[i](output, enc_output)
 
         return output

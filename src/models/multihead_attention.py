@@ -9,7 +9,7 @@ import torch.nn.functional as F
 logger = logging.getLogger()
 
 
-def attention(q, k, v, d_k, dropout=None, mask=False):
+def attention(q, k, v, d_k, mask=False):
     qk = torch.matmul(q, k.transpose(2, 1))
     qk /= np.sqrt(d_k)
 
@@ -25,9 +25,6 @@ def attention(q, k, v, d_k, dropout=None, mask=False):
         qk += mask_matrix
 
     qk = F.softmax(qk, dim=-1)
-
-    if dropout:
-        qk = dropout(qk)
 
     output = torch.matmul(qk, v)
 
@@ -61,7 +58,7 @@ class SingleHeadAttention(nn.Module):
         k = self.WK(k)
         v = self.WV(v)
 
-        output = attention(q, k, v, d_k=self.d_k, dropout=self.dropout, mask=self.mask)
+        output = attention(q, k, v, d_k=self.d_k, mask=self.mask)
 
         return output
 

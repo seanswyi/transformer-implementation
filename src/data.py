@@ -28,7 +28,7 @@ class WMT2014Dataset():
             self.tokenizer.load(self.tokenizer_path + '.model')
         except OSError:
             logger.info("Training tokenizer and saving in %s" % self.args.tokenizer_filename)
-            train_command = '--input={} --model_prefix={} --vocab_size={} --bos_id=2 --eos_id=3 --pad_id=0 --unk_id=1'
+            train_command = '--input={} --model_prefix={} --vocab_size={} --model_type=bpe --bos_id=2 --eos_id=3 --pad_id=0 --unk_id=1'
             train_file = ','.join([self.args.src_train_file, self.args.tgt_train_file])
             spm.SentencePieceTrainer.train(train_command.format(train_file, self.tokenizer_path, self.args.vocab_size))
             self.tokenizer.load(self.tokenizer_path + '.model')
@@ -37,8 +37,8 @@ class WMT2014Dataset():
         self.train_tokenized_data = self.tokenize(mode='train')
         self.valid_tokenized_data = self.tokenize(mode='valid')
 
-        print_data_stats(og_data=self.train_data, tokenized_data=self.train_tokenized_data)
-        print_data_stats(og_data=self.valid_data, tokenized_data=self.valid_tokenized_data)
+        # print_data_stats(og_data=self.train_data, tokenized_data=self.train_tokenized_data)
+        # print_data_stats(og_data=self.valid_data, tokenized_data=self.valid_tokenized_data)
 
         src_train_longest = max([len(x[0]) for x in self.train_tokenized_data])
         tgt_train_longest = max([len(x[1]) for x in self.train_tokenized_data])
