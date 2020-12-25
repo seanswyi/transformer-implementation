@@ -35,7 +35,7 @@ def calculate_bleu(predictions, targets, tokenizer):
     predictions_decoded = [tokenizer.DecodeIds(ids) for ids in predictions]
     targets_decoded = [tokenizer.DecodeIds(ids) for ids in targets]
 
-    bleu_scores = [sentence_bleu([target], prediction).score for target, prediction in zip(targets_decoded, predictions_decoded)]
+    bleu_scores = [sentence_bleu([target], prediction) for target, prediction in zip(targets_decoded, predictions_decoded)]
     final_bleu_score = sum(bleu_scores) / len(bleu_scores)
 
     return final_bleu_score
