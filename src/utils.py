@@ -1,5 +1,6 @@
+from nltk.translate.bleu_score import sentence_bleu
 import numpy as np
-from sacrebleu import sentence_bleu
+# from sacrebleu import sentence_bleu
 import torch
 import torch.nn.functional as F
 
@@ -34,7 +35,7 @@ def calculate_bleu(predictions, targets, tokenizer):
     predictions_decoded = [tokenizer.DecodeIds(ids) for ids in predictions]
     targets_decoded = [tokenizer.DecodeIds(ids) for ids in targets]
 
-    bleu_scores = [sentence_bleu(prediction, target).score for prediction, target in zip(predictions_decoded, targets_decoded)]
+    bleu_scores = [sentence_bleu([target], prediction).score for target, prediction in zip(targets_decoded, predictions_decoded)]
     final_bleu_score = sum(bleu_scores) / len(bleu_scores)
 
     return final_bleu_score
