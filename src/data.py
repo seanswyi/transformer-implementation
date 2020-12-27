@@ -6,7 +6,6 @@ import sentencepiece as spm
 import torch
 from tqdm import tqdm
 
-from utils import print_data_stats
 
 logger = logging.getLogger()
 
@@ -36,9 +35,6 @@ class WMT2014Dataset():
 
         self.train_tokenized_data = self.tokenize(mode='train')
         self.valid_tokenized_data = self.tokenize(mode='valid')
-
-        # print_data_stats(og_data=self.train_data, tokenized_data=self.train_tokenized_data)
-        # print_data_stats(og_data=self.valid_data, tokenized_data=self.valid_tokenized_data)
 
         src_train_longest = max([len(x[0]) for x in self.train_tokenized_data])
         tgt_train_longest = max([len(x[1]) for x in self.train_tokenized_data])
