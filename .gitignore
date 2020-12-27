@@ -6,3 +6,4 @@ train.tags.*
 wandb/
 logs/
 src/saved_models/
+predictions/
