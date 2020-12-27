@@ -5,7 +5,6 @@ import os
 import time
 
 import torch
-import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -14,8 +13,8 @@ import wandb
 
 from data import WMT2014Dataset
 from models.transformer import Transformer
-from models.embedding_layer import EmbeddingLayer
-from utils import adjust_learning_rate, calculate_bleu, decode_autoregressive
+from utils import adjust_learning_rate, calculate_bleu, decode_autoregressive, translate
+
 
 logger = logging.getLogger()
 
@@ -35,6 +34,10 @@ def train(args, model, data):
     adjusted_lr = adjust_learning_rate(global_step, args)
     criterion = nn.NLLLoss(ignore_index=0)
     optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
+
+    best_eval_loss = 0.0
+    best_pred = []
+    best_epoch = 0
 
     epoch_progress_bar = tqdm(iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs)
     for epoch in epoch_progress_bar:
@@ -104,11 +107,15 @@ def train(args, model, data):
 
         if args.evaluate_during_training:
             evaluation_start = time.time()
-            evaluate(args, model, data, criterion)
+            eval_loss, predictions_and_targets = evaluate(args, model, data, criterion)
             evaluation_end = time.time()
             logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
-    return None
+            if eval_loss < best_eval_loss:
+                best_pred = predictions_and_targets
+                best_epoch = epoch
+
+    return best_pred, best_epoch
 
 
 def evaluate(args, model, data, criterion):
@@ -118,6 +125,7 @@ def evaluate(args, model, data, criterion):
 
     eval_progress_bar = tqdm(iterable=valid_data, desc="Evaluating", total=len(valid_data))
     eval_loss = 0.0
+    predictions_and_targets = []
 
     with torch.no_grad():
         for step, batch in enumerate(eval_progress_bar):
@@ -151,6 +159,10 @@ def evaluate(args, model, data, criterion):
             decoded_outputs = decode_autoregressive(model=model, src=src)
             eval_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=tokenizer)
 
+            predictions = translate(data=decoded_outputs, tokenizer=tokenizer)
+            targets = translate(data=tgt, tokenizer=tokenizer)
+            predictions_and_targets.extend([f"{p}\t{t}" for p, t in zip(predictions, targets)])
+
             wandb.log({'Eval BLEU': eval_bleu})
 
             # if step % args.log_step == 0:
@@ -160,7 +172,7 @@ def evaluate(args, model, data, criterion):
 
         wandb.log({'Evaluation Loss': eval_loss})
 
-    return None
+    return eval_loss, predictions
 
 
 def main(args):
@@ -181,9 +193,16 @@ def main(args):
     wandb.watch(model)
 
     train_start = time.time()
-    train(args, model, data)
+    best_pred, best_epoch = train(args, model, data)
     train_end = time.time()
     logger.info(f"Training took approximately {time.strftime('%H:%M:%S', time.gmtime(train_end - train_start))}")
+
+    # If we evaluated during training, write predictions.
+    if best_pred:
+        pred_filename = f"../predictions/{args.wandb_name}_pred_epoch{best_epoch}.txt"
+        logger.info(f"Writing predictions and targets to {pred_filename}.")
+        with open(file=pred_filename, mode='w') as f:
+            f.write('\n'.join(best_pred) + '\n')
 
     model_file_name = args.log_filename.split('/')[-1]
     model_save_file = os.path.join(args.model_save_dir, model_file_name)
