@@ -37,6 +37,7 @@ def train(args, model, data):
     optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
 
     best_eval_loss = 0.0
+    best_bleu = 0.0
     best_pred = []
     best_epoch = 0
 
@@ -113,10 +114,10 @@ def train(args, model, data):
             evaluation_end = time.time()
             logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
-            bleu_score = corpus_bleu('\n'.join(predictions_translated), '\n'.join(targets_translated))
-            wandb.log({"Eval BLEU": bleu_score.score})
+            bleu_score = corpus_bleu('\n'.join(predictions_translated), '\n'.join(targets_translated)).score
+            wandb.log({"Eval BLEU": bleu_score})
 
-            if eval_loss < best_eval_loss:
+            if bleu_score > best_bleu:
                 predictions_and_targets = [f"{p}\t{t}" for p, t in zip(best_pred, targets_translated)]
                 best_pred = predictions_translated
                 best_epoch = epoch
