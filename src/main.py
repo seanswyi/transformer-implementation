@@ -4,6 +4,7 @@ import logging
 import os
 import time
 
+from sacrebleu import corpus_bleu
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -43,6 +44,7 @@ def train(args, model, data):
     for epoch in epoch_progress_bar:
         epoch_loss = 0.0
 
+        data.shuffle()
         step_progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
         epoch_start_time = time.time()
         for step, batch in enumerate(step_progress_bar):
@@ -107,15 +109,19 @@ def train(args, model, data):
 
         if args.evaluate_during_training:
             evaluation_start = time.time()
-            eval_loss, predictions_and_targets = evaluate(args, model, data, criterion)
+            eval_loss, predictions_translated, targets_translated = evaluate(args, model, data, criterion)
             evaluation_end = time.time()
             logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
+            bleu_score = corpus_bleu('\n'.join(predictions_translated), '\n'.join(targets_translated))
+            wandb.log({"Eval BLEU": bleu_score.score})
+
             if eval_loss < best_eval_loss:
-                best_pred = predictions_and_targets
+                predictions_and_targets = [f"{p}\t{t}" for p, t in zip(best_pred, targets_translated)]
+                best_pred = predictions_translated
                 best_epoch = epoch
 
-    return best_pred, best_epoch
+    return predictions_and_targets, best_epoch
 
 
 def evaluate(args, model, data, criterion):
@@ -125,7 +131,8 @@ def evaluate(args, model, data, criterion):
 
     eval_progress_bar = tqdm(iterable=valid_data, desc="Evaluating", total=len(valid_data))
     eval_loss = 0.0
-    predictions_and_targets = []
+    predictions_translated = []
+    targets_translated = []
 
     with torch.no_grad():
         for step, batch in enumerate(eval_progress_bar):
@@ -157,22 +164,23 @@ def evaluate(args, model, data, criterion):
             eval_loss += loss.item()
 
             decoded_outputs = decode_autoregressive(model=model, src=src)
-            eval_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=tokenizer)
+            # eval_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=tokenizer)
 
             predictions = translate(data=decoded_outputs, tokenizer=tokenizer)
             targets = translate(data=tgt, tokenizer=tokenizer)
-            predictions_and_targets.extend([f"{p}\t{t}" for p, t in zip(predictions, targets)])
+            predictions_translated.extend(predictions)
+            targets_translated.extend(targets)
 
-            wandb.log({'Eval BLEU': eval_bleu})
+            # wandb.log({'Eval BLEU': eval_bleu})
 
             # if step % args.log_step == 0:
-            logger.info(f"Step: {step} | Avg. BLEU: {eval_bleu}")
+            logger.info(f"Step: {step}")
             logger.info(f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}")
             logger.info(f"Prediction Sample: {tokenizer.DecodeIds(decoded_outputs[0].detach().long().tolist())}")
 
         wandb.log({'Evaluation Loss': eval_loss})
 
-    return eval_loss, predictions
+    return eval_loss, predictions_translated, targets_translated
 
 
 def main(args):
