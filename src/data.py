@@ -55,11 +55,6 @@ class WMT2014Dataset():
         self.valid_data = self.create_batches(data=self.valid_data)
         #################################################################################################################
 
-        ############# Shuffle training data. ############################################################################
-        shuffle_idxs = torch.randperm(n=self.train_data.shape[1])
-        self.train_data = self.train_data[:, shuffle_idxs]
-        #################################################################################################################
-
     def load(self, mode='train'):
         if mode == 'train':
             logger.info("Loading src and tgt from %s | %s" % (self.args.src_train_file, self.args.tgt_train_file))
@@ -127,3 +122,7 @@ class WMT2014Dataset():
             logger.info("Discarding %d sample(s)." % (len(data) - (num_batches * self.batch_size)))
 
         return batch_data.view(num_batches, self.batch_size, 2, self.max_seq_len)
+
+    def shuffle(self):
+        shuffle_idxs = torch.randperm(n=self.train_data.shape[0])
+        self.train_data = self.train_data[shuffle_idxs]
