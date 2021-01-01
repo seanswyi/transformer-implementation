@@ -14,7 +14,7 @@ import wandb
 
 from data import WMT2014Dataset
 from models.transformer import Transformer
-from utils import adjust_learning_rate, calculate_bleu, decode_autoregressive, translate
+from utils import adjust_learning_rate, decode_autoregressive, translate
 
 
 logger = logging.getLogger()
@@ -36,7 +36,6 @@ def train(args, model, data):
     criterion = nn.NLLLoss(ignore_index=0)
     optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
 
-    best_eval_loss = 0.0
     best_bleu = 0.0
     best_pred = []
     best_epoch = 0
@@ -165,16 +164,12 @@ def evaluate(args, model, data, criterion):
             eval_loss += loss.item()
 
             decoded_outputs = decode_autoregressive(model=model, src=src)
-            # eval_bleu = calculate_bleu(predictions=decoded_outputs, targets=tgt, tokenizer=tokenizer)
 
             predictions = translate(data=decoded_outputs, tokenizer=tokenizer)
             targets = translate(data=tgt, tokenizer=tokenizer)
             predictions_translated.extend(predictions)
             targets_translated.extend(targets)
 
-            # wandb.log({'Eval BLEU': eval_bleu})
-
-            # if step % args.log_step == 0:
             logger.info(f"Step: {step}")
             logger.info(f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}")
             logger.info(f"Prediction Sample: {tokenizer.DecodeIds(decoded_outputs[0].detach().long().tolist())}")

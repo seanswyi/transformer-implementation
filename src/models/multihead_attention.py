@@ -47,10 +47,6 @@ class SingleHeadAttention(nn.Module):
         self.WK = nn.Linear(in_features=self.d_model, out_features=self.d_k)
         self.WV = nn.Linear(in_features=self.d_model, out_features=self.d_v)
 
-        nn.init.xavier_uniform_(self.WQ.weight)
-        nn.init.xavier_uniform_(self.WK.weight)
-        nn.init.xavier_uniform_(self.WV.weight)
-
         self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, q, k, v):
@@ -58,7 +54,7 @@ class SingleHeadAttention(nn.Module):
         k = self.WK(k)
         v = self.WV(v)
 
-        output = attention(q, k, v, d_k=self.d_k, mask=self.mask)
+        output = self.dropout(attention(q, k, v, d_k=self.d_k, mask=self.mask))
 
         return output
 
