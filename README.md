@@ -28,5 +28,6 @@ Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arx
 - [x] ~~Find problem in code regarding BLEU evaluation.~~ (Dec. 24th, 2020)
   - Problem was that BLEU should be evaluated at the corpus level, not the sentence level. The reason is because calculating BLEU on a sentence level is too noisy and inaccurate.
 - [x] ~~Modify code so that the output linear layer shares the weights of the embedding matrix.~~ (Dec. 30th, 2020)
+  - I was previously treating the "pre-softmax linear transformation" as a simple matrix multiplication between the embedding layer's weights and the previous layer's output (i.e., input). What I needed to do is to treat the output linear layer as a PyTorch Module (i.e., `torch.nn.Linear`) and to do that I needed to do `output_linear.weight = embedding_layer.weight`).
 - [ ] Add beam search.
 - [ ] Add plots to REARDME file.
