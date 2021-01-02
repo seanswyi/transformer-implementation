@@ -90,7 +90,7 @@ def train(args, model, data):
             output_probs = F.softmax(output, dim=-1)
             predictions = torch.argmax(output_probs, dim=-1)
 
-            if step % args.log_step == 0:
+            if (step + 1) % args.log_step == 0:
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
                 logger.info(f"Target Sample Tokens: {tgt[0].detach().long().tolist()}")
                 logger.info(f"Target Shifted Right Tokens: {tgt_shifted_right[0].detach().long().tolist()}")
@@ -98,7 +98,7 @@ def train(args, model, data):
                 logger.info(f"Prediction Sample Tokens: {predictions[0].detach().long().tolist()}")
                 logger.info(f"Prediction Sample: {tokenizer.DecodeIds(predictions[0].detach().long().tolist())}")
 
-            wandb.log({'Step Loss': step_loss}, step=global_step)
+            wandb.log({'Training Loss': step_loss}, step=global_step)
             wandb.log({'Learning Rate': adjusted_lr}, step=global_step)
 
             global_step += 1
@@ -114,7 +114,7 @@ def train(args, model, data):
             logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
             bleu_score = corpus_bleu('\n'.join(predictions_translated), '\n'.join(targets_translated)).score
-            wandb.log({"Eval BLEU": bleu_score})
+            wandb.log({"Evaluation BLEU": bleu_score})
 
             if bleu_score > best_bleu:
                 predictions_and_targets = [f"{p}\t{t}" for p, t in zip(best_pred, targets_translated)]
