@@ -21,6 +21,28 @@ logger = logging.getLogger()
 
 
 def train(args, model, data):
+    """
+    Function to perform training and (optionally) evaluation.
+
+    Arguments
+    ---------
+    args: <argparse.Namespace> Arguments used for overall process.
+    model: <models.transformer.Transformer> Transformer model.
+    data: <data.WMT2014Dataset> Dataset object containing data.
+
+    Returns
+    -------
+    predictions_and_targets: <list> List containing predictions with their respective ground-truth targets.
+    best_epoch: <int> Epoch that the model obtained the best BLEU score.
+
+    Training is fairly straightforward. One caveat is that predictions for training are \
+        obtained in a different manner from evaluation.
+    Training simply returns the output representations passed through a softmax layer whereas \
+        evaluation performs autoregressive decoding for the prediction.
+
+    BLEU score is calculated on the entire predictions and entire targets using SacreBLEU's \
+        corpus_bleu function.
+    """
     tokenizer = data.tokenizer
 
     if torch.cuda.is_available():
@@ -44,7 +66,9 @@ def train(args, model, data):
     for epoch in epoch_progress_bar:
         epoch_loss = 0.0
 
+        # Make sure to shuffle (training) data before every training epoch.
         data.shuffle()
+
         step_progress_bar = tqdm(iterable=data.train_data, desc="Training", total=len(data.train_data))
         epoch_start_time = time.time()
         for step, batch in enumerate(step_progress_bar):
@@ -125,6 +149,25 @@ def train(args, model, data):
 
 
 def evaluate(args, model, data, criterion):
+    """
+    Function to perform evaluation.
+
+    Arguments
+    ---------
+    args: <argparse.Namespace> Arguments used for overall process.
+    model: <models.transformer.Transformer> Transformer model.
+    data: <data.WMT2014Dataset> Dataset object containing data.
+    criterion: <torch.nn.modules.loss.CrossEntropyLoss>  Loss function.
+
+    Returns
+    -------
+    eval_loss: <float> Loss value for entire evaluation.
+    predictions_translated: <list> Predicted indices decoded using the tokenizer.
+    targets_translated: <list> Ground truth indices decoded using the tokenizer.
+
+    Evaluation is conducted using an autoregressive decoding strategy. For more information \
+        regarding the decoding, please refer to utils.decode_autoregressive.
+    """
     valid_data = data.valid_data
     tokenizer = data.tokenizer
     model.eval()
@@ -180,6 +223,16 @@ def evaluate(args, model, data, criterion):
 
 
 def main(args):
+    """
+    Main function for overall process.
+
+    Arguments:
+    | args: Arguments used for overall process.
+
+    The process is fairly straightforward. Training is conducted first with evaluation being \
+        conducted at the end of each training epoch.
+    The best model is saved as a PyTorch file.
+    """
     global_process_start = time.time()
     msg_format = '[%(asctime)s - %(levelname)s - %(filename)s: %(lineno)d (%(funcName)s)] %(message)s'
     logging.basicConfig(format=msg_format, level=logging.INFO, \
