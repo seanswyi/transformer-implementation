@@ -54,7 +54,7 @@ def train(args, model, data):
 
     global_step = 0
 
-    adjusted_lr = adjust_learning_rate(global_step, args)
+    adjusted_lr = adjust_learning_rate(global_step, args.d_model, args.warmup_steps)
     criterion = nn.NLLLoss(ignore_index=0)
     optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
 
@@ -107,7 +107,7 @@ def train(args, model, data):
             loss.backward()
             optimizer.step()
 
-            adjusted_lr = adjust_learning_rate(global_step, args)
+            adjusted_lr = adjust_learning_rate(global_step, args.d_model, args.warmup_steps)
             for i in range(len(optimizer.param_groups)):
                 optimizer.param_groups[i]['lr'] = adjusted_lr
 

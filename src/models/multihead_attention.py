@@ -10,6 +10,27 @@ logger = logging.getLogger()
 
 
 def attention(q, k, v, d_k, mask=False):
+    """
+    Function to perform scaled dot-product attention.
+
+    Arguments
+    ---------
+    q: <torch.Tensor> Query matrix.
+    k: <torch.Tensor> Key matrix.
+    v: <torch.Tensor> Value matrix.
+    d_k: <int> Dimensionality for linear projection of attention. d_model / num_heads = 64 in this implementation.
+
+    Keyword Arguments
+    -----------------
+    mask: <bool> If True, then set the mask after the matrix multiplication QK.
+
+    Returns
+    -------
+    output: <torch.Tensor> Output of scaled dot-product self-attention.
+
+    Be careful of how you set your mask. You want to make sure that the masked values are an "extremely negative" value \
+        in order for the last softmax to work properly.
+    """
     qk = torch.matmul(q, k.transpose(2, 1))
     qk /= np.sqrt(d_k)
 
@@ -32,8 +53,35 @@ def attention(q, k, v, d_k, mask=False):
 
 
 class SingleHeadAttention(nn.Module):
+    """
+    Object to hold a self-attention operation for one head.
+
+    Attributes (in alphabetical order)
+    ----------------------------------
+    WK: <torch.nn.modules.linear.Linear> Linear projection for keys.
+    WQ: <torch.nn.modules.linear.Linear> Linear projection for queries.
+    WV: <torch.nn.modules.linear.Linear> Linear projection for values.
+    d_k: <int> Dimensionality for linear projection of attention. d_model / num_heads = 64 in this implementation.
+    d_model <int> Dimensionality of model. 512 as per the paper.
+    d_q: <int> Dimensionality for linear projection of attention. d_model / num_heads = 64 in this implementation.
+    d_v: <int> Dimensionality for linear projection of attention. d_model / num_heads = 64 in this implementation.
+    dropout: <torch.nn.modules.dropout.Dropout> Dropout from https://jmlr.org/papers/v15/srivastava14a.html.
+    mask: <bool> If True, then set the mask after the matrix multiplication QK.
+    num_heads: <int> Number of heads. 8 as per the paper.
+    """
     def __init__(self, args, mask=False):
-        super(SingleHeadAttention, self).__init__()
+        """
+        Basic initialization of SingleHeadAttention.
+
+        Arguments
+        ---------
+        args: <argparse.Namespace> Arguments used for overall process.
+
+        Keyword Arguments
+        -----------------
+        mask: <bool> If True, then set the mask after the matrix multiplication QK.
+        """
+        super().__init__()
 
         self.mask = mask
         self.d_model = args.d_model
@@ -50,6 +98,19 @@ class SingleHeadAttention(nn.Module):
         self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, q, k, v):
+        """
+        Forward pass for SingleHeadAttention.
+
+        Arguments
+        ---------
+        q: <torch.Tensor> Query matrix.
+        k: <torch.Tensor> Key matrix.
+        v: <torch.Tensor> Value matrix.
+
+        Returns
+        -------
+        output: <torch.Tensor> Output after performing self-attention.
+        """
         q = self.WQ(q)
         k = self.WK(k)
         v = self.WV(v)
@@ -60,20 +121,56 @@ class SingleHeadAttention(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
+    """
+    Object to hold a self-attention operation for multiple heads.
+
+    Attributes (in alphabetical order)
+    ----------------------------------
+    WO: <torch.nn.modules.linear.Linear> Linear projection for output.
+    attention_heads: <torch.nn.modules.container.ModuleList> Object to hold head's self-attentionv. 8 here as per the paper.
+    d_model: <int> Dimensionality of model. 512 as per the paper.
+    d_v: <int> Dimensionality for linear projection of attention. d_model / num_heads = 64 in this implementation.
+    mask: <bool> If True, then set the mask after the matrix multiplication QK.
+    num_heads: <int> Number of heads. 8 as per the paper.
+    """
     def __init__(self, args, mask=False):
-        super(MultiHeadAttention, self).__init__()
+        """
+        Basic initialization of MultiHeadAttention.
+
+        Arguments
+        ---------
+        args: <argparse.Namespace> Arguments used for overall process.
+
+        Keyword Arguments
+        -----------------
+        mask: <bool> If True, then set the mask after the matrix multiplication QK.
+        """
+        super().__init__()
 
         self.mask = mask
         self.d_model = args.d_model
         self.num_heads = args.num_heads
         self.d_v = int(self.d_model / self.num_heads)
-        self.WO = nn.Linear(in_features=(self.num_heads * self.d_v), out_features=self.d_model)
 
+        self.WO = nn.Linear(in_features=(self.num_heads * self.d_v), out_features=self.d_model)
         nn.init.xavier_uniform_(self.WO.weight)
 
         self.attention_heads = nn.ModuleList([SingleHeadAttention(args, mask=self.mask) for _ in range(self.num_heads)])
 
     def forward(self, q, k, v):
+        """
+        Forward pass for MultiHeadAttention.
+
+        Arguments
+        ---------
+        q: <torch.Tensor> Query matrix.
+        k: <torch.Tensor> Key matrix.
+        v: <torch.Tensor> Value matrix.
+
+        Returns
+        -------
+        output: <torch.Tensor> Output after performing self-attention for all head and linear projecting the output.
+        """
         attention_results = [head(q, k, v) for head in self.attention_heads]
         attention_concatenated = torch.cat(attention_results, dim=2)
         output = self.WO(attention_concatenated)

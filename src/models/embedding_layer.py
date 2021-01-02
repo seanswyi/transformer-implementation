@@ -7,20 +7,59 @@ import torch.nn as nn
 
 logger = logging.getLogger()
 
+
 class EmbeddingLayer(nn.Module):
+    """
+    Object to hold entire embedding layer (including positional encoding).
+
+    Attributes (in alphabetical order)
+    ----------------------------------
+    embedding_layer: <torch.nn.modules.sparse.Embedding> Embedding layer with 16,000 embeddings, with each embedding being dimension 512. \
+        We set `padding_idx` to be 0 because we want to tell our embedding layer which index is reserved for padding sequences.
+    positional_encoding_layer: <method> Adds the sinusoidal positional values to the embeddings.
+    """
     def __init__(self, args):
-        super(EmbeddingLayer, self).__init__()
+        """
+        Basic initialization of what we need.
+
+        Arguments
+        ---------
+        args: <argparse.Namespace> Arguments used for overall process.
+        """
+        super().__init__()
 
         self.args = args
         self.embedding_layer = nn.Embedding(num_embeddings=args.vocab_size, embedding_dim=args.d_model, padding_idx=0)
 
     def forward(self, x):
+        """
+        Performs embedding. Passes through embedding layer first, then adds sinusoidal positional values.
+
+        Arguments
+        ---------
+        x: <torch.Tensor> Data to retrieve embedding values of.
+
+        Returns
+        -------
+        <torch.Tensor> Embedding values from trained embedding and added sinusoidal positional values.
+        """
         x_embedding = self.embedding_layer(x)
         x_embedding += self.positional_encoding_layer(x_embedding)
 
         return x_embedding
 
     def positional_encoding_layer(self, x):
+        """
+        Retrieves the positional values according to the sine and cosine functions.
+
+        Arguments
+        ---------
+        x: <torch.Tensor> Embedding values.
+
+        Returns
+        -------
+        Positional encoding values according to index (i.e., size of x).
+        """
         positions = np.arange(x.shape[1])
         dimensions = np.arange(x.shape[2])
 
