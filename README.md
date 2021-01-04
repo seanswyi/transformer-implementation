@@ -18,6 +18,10 @@ After that, go into the `data` directory and run `bash ./preprocess.sh` to prepr
 
 Running the code is fairly simple. Just go into the `src` directory and run `python ./main.py` with the options you'd like. If you're not using [Weights & Biases](https://wandb.ai/) already, I'd strongly recommend using it. It's a great tool to plot metrics and monitor your model's gradients. They have a lot more functionality, but these two are the main ones I use.
 
+---
+
+You can also use the Makefile recipes that are contained in `src/Makefile`. Running `make debug` will 1) Turn off W&B, and 2) Only use the first 100 samples for training. Additionally, running `make run` and `make run_single_gpu` will run the model with all available GPU's or one GPU, respectively. Note, however, that the previously mentioned two Make recipes don't have a `wandb on` statement.
+
 ## To-Do
 
 This work is ongoing as there are still things to add for improvement. For example, the decoding strategy I'm using right now is a greedy approach, but I plan to add beam search as well. In addition I'll add an option to load a pre-trained model to directly start translating rather than having to go through the entire training process.
