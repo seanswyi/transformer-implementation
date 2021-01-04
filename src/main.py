@@ -226,8 +226,9 @@ def main(args):
     """
     Main function for overall process.
 
-    Arguments:
-    | args: Arguments used for overall process.
+    Arguments
+    ---------
+    args: <argparse.Namespace> Arguments used for overall process.
 
     The process is fairly straightforward. Training is conducted first with evaluation being \
         conducted at the end of each training epoch.
