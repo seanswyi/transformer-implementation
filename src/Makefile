@@ -2,7 +2,6 @@ debug:
 	wandb off;
 	python ./main.py --max_seq_len 50 --batch_size 2 --debug
 
-
 run:
 	python ./main.py --max_seq_len 50 --multiple_gpu --wandb_name transformer
 
