@@ -290,7 +290,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_seq_len', default=50, type=int)
     parser.add_argument('--model_save_dir', default='./saved_models', type=str)
     parser.add_argument('--multiple_gpu', action='store_true', default=False)
-    parser.add_argument('--num_epochs', default=50, type=int)
+    parser.add_argument('--num_epochs', default=25, type=int)
     parser.add_argument('--num_heads', default=8, type=int)
     parser.add_argument('--num_stacks', default=6, type=int)
     parser.add_argument('--src_train_file', default='../data/train.fr-en_preprocessed.fr', type=str)
