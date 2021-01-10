@@ -20,7 +20,7 @@ Running the code is fairly simple. Just go into the `src` directory and run `pyt
 
 You can also use the Makefile recipes that are contained in `src/Makefile`. Running `make debug` will 1) Turn off W&B, and 2) Only use the first 100 samples for training. Additionally, running `make run` and `make run_single_gpu` will run the model with all available GPU's or one GPU, respectively. Note, however, that the previously mentioned two Make recipes don't have a `wandb on` statement.
 
-## Example run.
+## Example Run
 
 Running the `make run` command should run the code with the default settings along with the option to use multiple GPU's. My personal run uses two NVIDIA Titan XP's and takes approximately 9 hours to finish the entire process. The result should give you something like the following (from W&B dashboard):
 
