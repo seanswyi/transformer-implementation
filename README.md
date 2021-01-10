@@ -12,7 +12,7 @@ Please feel free to contact me regarding any questions or comments. Feedback is 
 
 Go to the official website for the [Web Inventory of Transcribed and Translated Talks (WIT^3)](https://wit3.fbk.eu/) and find the appropriate data for IWSLT 2017. I personally used the French-English translation task, but you can choose whichever language you like. There used to be a convenient link to download the data directly, but after contacting the website maintainers the link's not working anymore and you'll have to manually download the data.
 
-After that, go into the `data` directory and run `bash ./preprocess.sh` to preproces the data and receive the resulting files. I've also uploaded the preprocessed data and tokenizer data filesm, but feel free to do it yourself.
+After that, go into the `data` directory and run `bash ./preprocess.sh` to preproces the data and receive the resulting files. I've also uploaded the preprocessed data and tokenizer data files, but feel free to do it yourself.
 
 ## Running the Code
 
