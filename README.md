@@ -22,9 +22,11 @@ You can also use the Makefile recipes that are contained in `src/Makefile`. Runn
 
 ## Example run.
 
-Running the `make run` command should run the code with the default settings along with the option to use multiple GPU's. My personal run uses two NVIDIA Titan XP's and takes approximately 9 hours to finish the entire process. The result should give you something like the following:
+Running the `make run` command should run the code with the default settings along with the option to use multiple GPU's. My personal run uses two NVIDIA Titan XP's and takes approximately 9 hours to finish the entire process. The result should give you something like the following (from W&B dashboard):
 
 ![image](https://github.com/seanswyi/transformer-implementation/blob/main/images/transformer_images.png?raw=true)
+
+Training loss continues to drop while evaluation loss starts to go up around the 20K step point. Your learning rate should shoot up and exponentially decay if you implement it according to the schedule specified in the paper (my implementation is in `src/utils.py`). Evaluation BLEU stays somewhat consistent around 25-30. The best BLEU score is 32.785 and the corresponding evaluation loss at that point is 13.817 (a little past 20K steps).
 
 ## To-Do
 
