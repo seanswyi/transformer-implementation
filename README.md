@@ -22,7 +22,7 @@ You can also use the Makefile recipes that are contained in `src/Makefile`. Runn
 
 ## Example Run
 
-Running the `make run` command should run the code with the default settings along with the option to use multiple GPU's. My personal run uses two NVIDIA Titan XP's and takes approximately 9 hours to finish the entire process. The result should give you something like the following (from W&B dashboard):
+Running the `make run` command should run the code with the default settings along with the option to use multiple GPU's. My personal run uses two NVIDIA Titan Xp's and takes approximately 9 hours to finish the entire process. The result should give you something like the following (from W&B dashboard):
 
 <p align="center">
   <img src="https://github.com/seanswyi/transformer-implementation/blob/main/images/transformer_images.jpg?raw=true" alt="Run Results"/>
