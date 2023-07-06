@@ -33,8 +33,8 @@ def decode_autoregressive(model, src):
     outputs = torch.ones(size=(src.shape[0],)).reshape(-1, 1) * 2
 
     if torch.cuda.is_available():
-        src = src.to('cuda')
-        outputs = outputs.to('cuda')
+        src = src.to("cuda")
+        outputs = outputs.to("cuda")
 
     for _ in range(src.shape[1]):
         prediction = F.softmax(model(src, outputs), dim=2)

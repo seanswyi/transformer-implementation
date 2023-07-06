@@ -15,6 +15,7 @@ class Encoder(nn.Module):
     layernorm: <torch.nn.modules.normalization.LayerNorm> Layer normalization from https://arxiv.org/abs/1607.06450.
     multihead_attention: <models.multihead_attention.MultiHeadAttention> Multihead Attention to perform self-attention.
     """
+
     def __init__(self, args):
         """
         Basic initialization of Encoder.

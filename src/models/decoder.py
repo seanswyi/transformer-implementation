@@ -16,6 +16,7 @@ class Decoder(nn.Module):
     masked_multihead_attention: <models.multihead_attention.MultiHeadAttention> Multihead Attention with mask after QK operation.
     multihead_attention: <models.multihead_attention.MultiHeadAttention> Multihead Attention to perform self-attention.
     """
+
     def __init__(self, args):
         """
         Basic initialization of Decoder.
