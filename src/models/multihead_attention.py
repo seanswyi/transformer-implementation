@@ -39,7 +39,7 @@ def attention(q, k, v, d_k, mask=False):
         mask_matrix = torch.triu(ones, diagonal=1) * (-1e9)
 
         if qk.is_cuda:
-            mask_matrix = mask_matrix.to('cuda')
+            mask_matrix = mask_matrix.to("cuda")
         else:
             logger.warning("Not using GPU!")
 
@@ -69,6 +69,7 @@ class SingleHeadAttention(nn.Module):
     mask: <bool> If True, then set the mask after the matrix multiplication QK.
     num_heads: <int> Number of heads. 8 as per the paper.
     """
+
     def __init__(self, args, mask=False):
         """
         Basic initialization of SingleHeadAttention.
@@ -133,6 +134,7 @@ class MultiHeadAttention(nn.Module):
     mask: <bool> If True, then set the mask after the matrix multiplication QK.
     num_heads: <int> Number of heads. 8 as per the paper.
     """
+
     def __init__(self, args, mask=False):
         """
         Basic initialization of MultiHeadAttention.
@@ -152,10 +154,14 @@ class MultiHeadAttention(nn.Module):
         self.num_heads = args.num_heads
         self.d_v = int(self.d_model / self.num_heads)
 
-        self.WO = nn.Linear(in_features=(self.num_heads * self.d_v), out_features=self.d_model)
+        self.WO = nn.Linear(
+            in_features=(self.num_heads * self.d_v), out_features=self.d_model
+        )
         nn.init.xavier_uniform_(self.WO.weight)
 
-        self.attention_heads = nn.ModuleList([SingleHeadAttention(args, mask=self.mask) for _ in range(self.num_heads)])
+        self.attention_heads = nn.ModuleList(
+            [SingleHeadAttention(args, mask=self.mask) for _ in range(self.num_heads)]
+        )
 
     def forward(self, q, k, v):
         """

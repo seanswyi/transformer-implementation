@@ -1,8 +1,8 @@
 import torch.nn as nn
 
+from models.decoder import Decoder
 from models.embedding_layer import EmbeddingLayer
 from models.encoder import Encoder
-from models.decoder import Decoder
 
 
 class Transformer(nn.Module):
@@ -22,6 +22,7 @@ class Transformer(nn.Module):
     softmax: <torch.nn.modules.activation.LogSoftmax> Log softmax to convert output to probabilities.
     vocab_size: <int> Size of vocabulary. Default is 16,000 in this implementation.
     """
+
     def __init__(self, args):
         """
         Basic initialization of Transformer.
@@ -45,7 +46,9 @@ class Transformer(nn.Module):
         decoders = [Decoder(self.args) for _ in range(self.num_stacks)]
         self.decoder_stack = nn.ModuleList(decoders)
 
-        self.output_linear = nn.Linear(in_features=self.d_model, out_features=self.vocab_size, bias=False)
+        self.output_linear = nn.Linear(
+            in_features=self.d_model, out_features=self.vocab_size, bias=False
+        )
         self.output_linear.weight = self.emb.embedding_layer.weight
 
         self.softmax = nn.LogSoftmax(dim=-1)

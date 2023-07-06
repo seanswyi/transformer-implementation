@@ -14,6 +14,7 @@ class FeedForwardNN(nn.Module):
     linear1: <torch.nn.modules.linear.Linear> First linear layer.
     linear2: <torch.nn.modules.linear.Linear> Second linear layer.
     """
+
     def __init__(self, args):
         """
         Basic initialization of FeedForwardNN.
