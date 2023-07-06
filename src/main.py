@@ -323,49 +323,149 @@ if __name__ == "__main__":
     right_now = time.time()
     timestamp = datetime.fromtimestamp(right_now).strftime("%m%d%Y-%H%M")
 
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.join(current_dir, "..")
+    data_dir = os.path.join(parent_dir, "data")
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch_size", default=128, type=int)
-    parser.add_argument("--beta1", default=0.9, type=float)
-    parser.add_argument("--beta2", default=0.98, type=float)
-    parser.add_argument("--epsilon", default=10e-9, type=float)
-    parser.add_argument("--evaluate_during_training", action="store_true", default=True)
-    parser.add_argument("--data_root", default="../data/", type=str)
-    parser.add_argument("--debug", action="store_true", default=False)
-    parser.add_argument("--d_ff", default=2048, type=int)
-    parser.add_argument("--d_model", default=512, type=int)
-    parser.add_argument("--log_filename", default="", type=str)
-    parser.add_argument("--log_step", default=50, type=int)
-    parser.add_argument("--max_seq_len", default=50, type=int)
-    parser.add_argument("--model_save_dir", default="./saved_models", type=str)
-    parser.add_argument("--multiple_gpu", action="store_true", default=False)
-    parser.add_argument("--num_epochs", default=25, type=int)
-    parser.add_argument("--num_heads", default=8, type=int)
-    parser.add_argument("--num_stacks", default=6, type=int)
+
     parser.add_argument(
-        "--src_train_file", default="../data/train.fr-en_preprocessed.fr", type=str
+        "--batch_size",
+        default=128,
+        type=int,
     )
     parser.add_argument(
-        "--tgt_train_file", default="../data/train.fr-en_preprocessed.en", type=str
+        "--beta1",
+        default=0.9,
+        type=float,
     )
     parser.add_argument(
-        "--src_valid_file", default="../data/valid.fr-en_preprocessed.fr", type=str
+        "--beta2",
+        default=0.98,
+        type=float,
     )
     parser.add_argument(
-        "--tgt_valid_file", default="../data/valid.fr-en_preprocessed.en", type=str
+        "--epsilon",
+        default=10e-9,
+        type=float,
     )
-    parser.add_argument("--vocab_size", default=16000, type=int)
-    parser.add_argument("--tokenizer_filename", default="sentence_piece", type=str)
-    parser.add_argument("--wandb_name", default="", type=str)
-    parser.add_argument("--warmup_steps", default=4000, type=int)
+    parser.add_argument(
+        "--evaluate_during_training",
+        action="store_true",
+        default=True,
+    )
+    parser.add_argument(
+        "--data_root",
+        default=data_dir,
+        type=str,
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--d_ff",
+        default=2048,
+        type=int,
+    )
+    parser.add_argument(
+        "--d_model",
+        default=512,
+        type=int,
+    )
+    parser.add_argument(
+        "--log_filename",
+        default="",
+        type=str,
+    )
+    parser.add_argument(
+        "--log_step",
+        default=50,
+        type=int,
+    )
+    parser.add_argument(
+        "--max_seq_len",
+        default=50,
+        type=int,
+    )
+    parser.add_argument(
+        "--model_save_dir",
+        default=os.path.join(parent_dir, "models"),
+        type=str,
+    )
+    parser.add_argument(
+        "--multiple_gpu",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--num_epochs",
+        default=25,
+        type=int,
+    )
+    parser.add_argument(
+        "--num_heads",
+        default=8,
+        type=int,
+    )
+    parser.add_argument(
+        "--num_stacks",
+        default=6,
+        type=int,
+    )
+    parser.add_argument(
+        "--src_train_file",
+        default=os.path.join(data_dir, "train.fr-en_preprocessed.fr"),
+        type=str,
+    )
+    parser.add_argument(
+        "--tgt_train_file",
+        default=os.path.join(data_dir, "train.fr-en_preprocessed.en"),
+        type=str,
+    )
+    parser.add_argument(
+        "--src_valid_file",
+        default=os.path.join(data_dir, "valid.fr-en_preprocessed.fr"),
+        type=str,
+    )
+    parser.add_argument(
+        "--tgt_valid_file",
+        default=os.path.join(data_dir, "valid.fr-en_preprocessed.en"),
+        type=str,
+    )
+    parser.add_argument(
+        "--vocab_size",
+        default=16000,
+        type=int,
+    )
+    parser.add_argument(
+        "--tokenizer_filename",
+        default="sentence_piece",
+        type=str,
+    )
+    parser.add_argument(
+        "--wandb_name",
+        default="",
+        type=str,
+    )
+    parser.add_argument(
+        "--warmup_steps",
+        default=4000,
+        type=int,
+    )
+
     args = parser.parse_args()
 
     logger.info(args)
 
     if args.wandb_name:
-        args.log_filename = f"../logs/{args.wandb_name}_{timestamp}"
+        log_filename = f"transformer_{args.wandb_name}_{timestamp}.log"
+        args.log_filename = os.path.join(parent_dir, log_filename)
         wandb.init(project="transformer", name=args.wandb_name, config=args)
     else:
-        args.log_filename = f"../logs/{timestamp}"
+        log_filename = f"transformer_{timestamp}.log"
+        args.log_filename = os.path.join(parent_dir, log_filename)
         wandb.init(project="transformer", config=args)
 
     main(args)
