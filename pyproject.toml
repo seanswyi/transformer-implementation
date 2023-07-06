@@ -7,8 +7,14 @@ readme = "README.md"
 packages = [{include = "transformer_implementation"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-
+python = "^3.10"
+torch = {url = "https://download.pytorch.org/whl/cu118/torch-2.0.0%2Bcu118-cp310-cp310-linux_x86_64.whl"}
+wandb = "^0.15.5"
+sacrebleu = "^2.3.1"
+tqdm = "^4.65.0"
+sentencepiece = "^0.1.99"
+datasets = "^2.13.1"
+ipython = "^8.14.0"
 
 [build-system]
 requires = ["poetry-core"]
