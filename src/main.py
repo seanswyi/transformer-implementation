@@ -447,18 +447,10 @@ if __name__ == "__main__":
     if args.wandb_name:
         log_filename = f"transformer_{args.wandb_name}_{timestamp}.log"
         args.log_filename = os.path.join(log_dir, log_filename)
-
-        if not os.path.exists(args.log_filename):
-            os.makedirs(args.log_filename, exist_ok=True)
-
         wandb.init(project="transformer", name=args.wandb_name, config=args)
     else:
         log_filename = f"transformer_{timestamp}.log"
         args.log_filename = os.path.join(log_dir, log_filename)
-
-        if not os.path.exists(args.log_filename):
-            os.makedirs(args.log_filename, exist_ok=True)
-
         wandb.init(project="transformer", config=args)
 
     main(args)
