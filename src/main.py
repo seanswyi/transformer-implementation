@@ -307,6 +307,10 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.join(current_dir, "..")
     data_dir = os.path.join(parent_dir, "data")
+    log_dir = os.path.join(parent_dir, "logs")
+
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
 
     parser = argparse.ArgumentParser()
 
@@ -442,7 +446,7 @@ if __name__ == "__main__":
 
     if args.wandb_name:
         log_filename = f"transformer_{args.wandb_name}_{timestamp}.log"
-        args.log_filename = os.path.join(parent_dir, "logs", log_filename)
+        args.log_filename = os.path.join(log_dir, log_filename)
 
         if not os.path.exists(args.log_filename):
             os.makedirs(args.log_filename, exist_ok=True)
@@ -450,7 +454,7 @@ if __name__ == "__main__":
         wandb.init(project="transformer", name=args.wandb_name, config=args)
     else:
         log_filename = f"transformer_{timestamp}.log"
-        args.log_filename = os.path.join(parent_dir, "logs", log_filename)
+        args.log_filename = os.path.join(log_dir, log_filename)
 
         if not os.path.exists(args.log_filename):
             os.makedirs(args.log_filename, exist_ok=True)
