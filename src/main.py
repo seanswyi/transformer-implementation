@@ -5,11 +5,9 @@ import time
 from datetime import datetime
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 import wandb
 from sacrebleu import corpus_bleu
+from torch import nn, optim
 from tqdm import tqdm
 
 from data import WMT2014Dataset
@@ -62,6 +60,7 @@ def train(args, model, data):
     best_pred = []
     best_epoch = 0
 
+    predictions_and_targets = []
     epoch_progress_bar = tqdm(
         iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs
     )
@@ -71,11 +70,11 @@ def train(args, model, data):
         # Make sure to shuffle (training) data before every training epoch.
         data.shuffle()
 
-        step_progress_bar = tqdm(
+        train_progress_bar = tqdm(
             iterable=data.train_data, desc="Training", total=len(data.train_data)
         )
         epoch_start_time = time.time()
-        for step, batch in enumerate(step_progress_bar):
+        for batch in train_progress_bar:
             step_loss = 0.0
             optimizer.zero_grad()
 
@@ -121,25 +120,6 @@ def train(args, model, data):
             for i in range(len(optimizer.param_groups)):
                 optimizer.param_groups[i]["lr"] = adjusted_lr
 
-            output_probs = F.softmax(output, dim=-1)
-            predictions = torch.argmax(output_probs, dim=-1)
-
-            if (step + 1) % args.log_step == 0:
-                logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
-                logger.info(f"Target Sample Tokens: {tgt[0].detach().long().tolist()}")
-                logger.info(
-                    f"Target Shifted Right Tokens: {tgt_shifted_right[0].detach().long().tolist()}"
-                )
-                logger.info(
-                    f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}"
-                )
-                logger.info(
-                    f"Prediction Sample Tokens: {predictions[0].detach().long().tolist()}"
-                )
-                logger.info(
-                    f"Prediction Sample: {tokenizer.DecodeIds(predictions[0].detach().long().tolist())}"
-                )
-
             wandb.log({"Training Loss": step_loss}, step=global_step)
             wandb.log({"Learning Rate": adjusted_lr}, step=global_step)
 
@@ -151,27 +131,27 @@ def train(args, model, data):
             f"One training epoch took approximately {time.strftime('%H:%M:%S', time.gmtime(epoch_end_time - epoch_start_time))}"
         )
 
-        if args.evaluate_during_training:
-            evaluation_start = time.time()
-            eval_loss, predictions_translated, targets_translated = evaluate(
-                args, model, data, criterion
-            )
-            evaluation_end = time.time()
-            logger.info(
-                f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}"
-            )
+        evaluation_start = time.time()
+        _, predictions_translated, targets_translated = evaluate(
+            args, model, data, criterion
+        )
+        evaluation_end = time.time()
+        logger.info(
+            f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}"
+        )
 
-            bleu_score = corpus_bleu(
-                "\n".join(predictions_translated), "\n".join(targets_translated)
-            ).score
-            wandb.log({"Evaluation BLEU": bleu_score})
+        bleu_score = corpus_bleu(
+            predictions_translated,
+            [[tgt] for tgt in targets_translated],
+        ).score
+        wandb.log({"Evaluation BLEU": bleu_score})
 
-            if bleu_score > best_bleu:
-                predictions_and_targets = [
-                    f"{p}\t{t}" for p, t in zip(best_pred, targets_translated)
-                ]
-                best_pred = predictions_translated
-                best_epoch = epoch
+        if bleu_score > best_bleu:
+            predictions_and_targets = [
+                f"{p}\t{t}" for p, t in zip(best_pred, targets_translated)
+            ]
+            best_pred = predictions_translated
+            best_epoch = epoch
 
     return predictions_and_targets, best_epoch
 
@@ -298,7 +278,8 @@ def main(args):
     best_pred, best_epoch = train(args, model, data)
     train_end = time.time()
     logger.info(
-        f"Training took approximately {time.strftime('%H:%M:%S', time.gmtime(train_end - train_start))}"
+        "Training took approximately %s",
+        time.strftime("%H:%M:%S", time.gmtime(train_end - train_start)),
     )
 
     # If we evaluated during training, write predictions.
@@ -461,11 +442,19 @@ if __name__ == "__main__":
 
     if args.wandb_name:
         log_filename = f"transformer_{args.wandb_name}_{timestamp}.log"
-        args.log_filename = os.path.join(parent_dir, log_filename)
+        args.log_filename = os.path.join(parent_dir, "logs", log_filename)
+
+        if not os.path.exists(args.log_filename):
+            os.makedirs(args.log_filename, exist_ok=True)
+
         wandb.init(project="transformer", name=args.wandb_name, config=args)
     else:
         log_filename = f"transformer_{timestamp}.log"
-        args.log_filename = os.path.join(parent_dir, log_filename)
+        args.log_filename = os.path.join(parent_dir, "logs", log_filename)
+
+        if not os.path.exists(args.log_filename):
+            os.makedirs(args.log_filename, exist_ok=True)
+
         wandb.init(project="transformer", config=args)
 
     main(args)

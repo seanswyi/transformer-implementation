@@ -65,7 +65,7 @@ class WMT2014Dataset:
             self.args.data_root, self.args.tokenizer_filename
         )
         try:
-            self.tokenizer.load(self.tokenizer_path + ".model")
+            self.tokenizer.load(f"{self.tokenizer_path}.model")
         except OSError:
             logger.info(
                 "Training tokenizer and saving in %s" % self.args.tokenizer_filename
@@ -77,7 +77,7 @@ class WMT2014Dataset:
                     train_file, self.tokenizer_path, self.args.vocab_size
                 )
             )
-            self.tokenizer.load(self.tokenizer_path + ".model")
+            self.tokenizer.load(f"{self.tokenizer_path}.model")
         #################################################################################################################
 
         self.train_tokenized_data = self.tokenize(mode="train")
