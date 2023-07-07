@@ -263,6 +263,11 @@ def main(args):
         ],
     )
 
+    args_dict = vars(args)
+    args_msg = "\n\t".join(f"{arg}: {value}" for arg, value in args_dict.items())
+    args_msg = f"\t{args_msg}"
+    logger.info("\nArguments:\n%s", args_msg)
+
     data = WMT2014Dataset(args)
     model = Transformer(args)
 
@@ -441,8 +446,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
-    logger.info(args)
 
     if args.wandb_name:
         log_filename = f"transformer_{args.wandb_name}_{timestamp}.log"
