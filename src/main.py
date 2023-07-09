@@ -60,7 +60,7 @@ def train(args, model, data):
     best_pred = []
     best_epoch = 0
 
-    predictions_and_targets = []
+    preds_and_tgts = []
     epoch_progress_bar = tqdm(
         iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs
     )
@@ -73,7 +73,7 @@ def train(args, model, data):
         train_progress_bar = tqdm(
             iterable=data.train_data, desc="Training", total=len(data.train_data)
         )
-        epoch_start_time = time.time()
+        epoch_start = time.time()
         for batch in train_progress_bar:
             step_loss = 0.0
             optimizer.zero_grad()
@@ -125,35 +125,32 @@ def train(args, model, data):
 
             global_step += 1
 
-        wandb.log({"Epoch Loss": epoch_loss}, step=epoch)
-        epoch_end_time = time.time()
+        epoch_end = time.time()
+        epoch_duration = epoch_end - epoch_start
+        epoch_duration_fmt = time.strftime("%H:%M:%S", time.gmtime(epoch_duration))
         logger.info(
-            f"One training epoch took approximately {time.strftime('%H:%M:%S', time.gmtime(epoch_end_time - epoch_start_time))}"
+            "Epoch %d took %s and has loss: %.4f", epoch, epoch_duration_fmt, epoch_loss
         )
 
-        evaluation_start = time.time()
-        _, predictions_translated, targets_translated = evaluate(
-            args, model, data, criterion
-        )
-        evaluation_end = time.time()
-        logger.info(
-            f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}"
-        )
+        eval_start = time.time()
+        _, preds_translated, tgts_translated = evaluate(args, model, data, criterion)
+        eval_end = time.time()
+        eval_duration = eval_end - eval_start
+        eval_duration_fmt = time.strftime("%H:%M:%S", time.gmtime(eval_duration))
+        logger.info("Evaluation took approximately %s", eval_duration_fmt)
 
         bleu_score = corpus_bleu(
-            predictions_translated,
-            [[tgt] for tgt in targets_translated],
+            preds_translated,
+            [[tgt] for tgt in tgts_translated],
         ).score
         wandb.log({"Evaluation BLEU": bleu_score})
 
         if bleu_score > best_bleu:
-            predictions_and_targets = [
-                f"{p}\t{t}" for p, t in zip(best_pred, targets_translated)
-            ]
-            best_pred = predictions_translated
+            preds_and_tgts = [f"{p}\t{t}" for p, t in zip(best_pred, tgts_translated)]
+            best_pred = preds_translated
             best_epoch = epoch
 
-    return predictions_and_targets, best_epoch
+    return preds_and_tgts, best_epoch
 
 
 def evaluate(args, model, data, criterion):
@@ -289,13 +286,16 @@ def main(args):
 
     # If we evaluated during training, write predictions.
     if best_pred:
+        if not os.path.exists("../predictions"):
+            os.makedirs("../predictions", exist_ok=True)
+
         pred_filename = f"../predictions/{args.wandb_name}_pred_epoch{best_epoch}.txt"
         logger.info(f"Writing predictions and targets to {pred_filename}.")
         with open(file=pred_filename, mode="w") as f:
             f.write("\n".join(best_pred) + "\n")
 
-    model_file_name = args.log_filename.split("/")[-1]
-    model_save_file = os.path.join(args.model_save_dir, model_file_name) + ".pt"
+    model_file_name = f"{args.log_filename.split('/')[-1]}.pt"
+    model_save_file = os.path.join(args.model_save_dir, model_file_name)
     logger.info(f"Saving model in {args.model_save_dir} as {args.log_filename}")
     torch.save(model.state_dict(), model_save_file)
 
@@ -446,6 +446,9 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    if not os.path.exists(args.model_save_dir):
+        os.makedirs(args.model_save_dir, exist_ok=True)
 
     if args.wandb_name:
         log_filename = f"transformer_{args.wandb_name}_{timestamp}.log"
