@@ -141,7 +141,7 @@ def train(args, model, data):
 
         bleu_score = corpus_bleu(
             preds_translated,
-            [[tgt] for tgt in tgts_translated],
+            [tgts_translated],
         ).score
         wandb.log({"Evaluation BLEU": bleu_score})
 
