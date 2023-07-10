@@ -286,12 +286,13 @@ def main(args):
 
     # If we evaluated during training, write predictions.
     if best_pred:
-        if not os.path.exists("../predictions"):
-            os.makedirs("../predictions", exist_ok=True)
+        if not os.path.exists(args.pred_tgt_dir):
+            os.makedirs(args.pred_tgt_dir, exist_ok=True)
 
-        pred_filename = f"../predictions/{args.wandb_name}_pred_epoch{best_epoch}.txt"
-        logger.info(f"Writing predictions and targets to {pred_filename}.")
-        with open(file=pred_filename, mode="w") as f:
+        pred_filename = f"{args.wandb_name}_pred_epoch{best_epoch}.txt"
+        pred_file = os.path.join(args.pred_tgt_dir, pred_filename)
+        logger.info(f"Writing predictions and targets to {pred_file}.")
+        with open(file=pred_file, mode="w") as f:
             f.write("\n".join(best_pred) + "\n")
 
     model_file_name = f"{args.log_filename.split('/')[-1]}.pt"
@@ -313,6 +314,7 @@ if __name__ == "__main__":
     parent_dir = os.path.join(current_dir, "..")
     data_dir = os.path.join(parent_dir, "data")
     log_dir = os.path.join(parent_dir, "logs")
+    pred_tgt_dir = os.path.join(parent_dir, "outputs")
 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
@@ -446,6 +448,12 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    args.current_dir = current_dir
+    args.parent_dir = parent_dir
+    args.data_dir = data_dir
+    args.log_dir = log_dir
+    args.pred_tgt_dir = pred_tgt_dir
 
     if not os.path.exists(args.model_save_dir):
         os.makedirs(args.model_save_dir, exist_ok=True)
