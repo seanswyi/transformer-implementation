@@ -7,3 +7,5 @@ wandb/
 logs/
 src/saved_models/
 predictions/
+models/
+outputs/
