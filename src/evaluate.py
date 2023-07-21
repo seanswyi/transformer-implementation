@@ -1,7 +1,9 @@
 import logging
+import random
 
 import torch
 import wandb
+from sacrebleu import corpus_bleu
 from tqdm import tqdm
 
 from translate import convert_ids_to_tokens
@@ -35,15 +37,17 @@ def evaluate(args, model, data, criterion):
     tokenizer = data.tokenizer
     model.eval()
 
-    eval_progress_bar = tqdm(
-        iterable=valid_data, desc="Evaluating", total=len(valid_data)
-    )
     eval_loss = 0.0
-    predictions_translated = []
-    targets_translated = []
+    preds_translated = []
+    tgts_translated = []
 
     with torch.no_grad():
-        for step, batch in enumerate(eval_progress_bar):
+        eval_progress_bar = tqdm(
+            iterable=valid_data,
+            desc="Evaluating",
+            total=len(valid_data),
+        )
+        for batch in eval_progress_bar:
             src, tgt = batch[:, 0], batch[:, 1]
             bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
             tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[
@@ -78,20 +82,27 @@ def evaluate(args, model, data, criterion):
             decoded_outputs = decode_autoregressive(model=model, src=src)
 
             predictions = convert_ids_to_tokens(
-                data=decoded_outputs, tokenizer=tokenizer
+                data=decoded_outputs,
+                tokenizer=tokenizer,
             )
             targets = convert_ids_to_tokens(data=tgt, tokenizer=tokenizer)
-            predictions_translated.extend(predictions)
-            targets_translated.extend(targets)
+            preds_translated.extend(predictions)
+            tgts_translated.extend(targets)
 
-            logger.info(f"Step: {step}")
-            logger.info(
-                f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}"
-            )
-            logger.info(
-                f"Prediction Sample: {tokenizer.DecodeIds(decoded_outputs[0].detach().long().tolist())}"
-            )
+        assert len(preds_translated) == len(
+            tgts_translated
+        ), "Lens of preds and tgts don't match!"
+        sample_idxs = random.sample(population=range(len(preds_translated)), k=5)
+        for idx in sample_idxs:
+            sample_str = f"Pred: {preds_translated[idx]}\nTgt: {tgts_translated[idx]}"
+            logger.info("Sampled pred and tgt:\n%s", sample_str)
 
         wandb.log({"Evaluation Loss": eval_loss})
 
-    return eval_loss, predictions_translated, targets_translated
+    bleu_score = corpus_bleu(
+        preds_translated,
+        [tgts_translated],
+    ).score
+    wandb.log({"Evaluation BLEU": bleu_score})
+
+    return eval_loss, bleu_score, preds_translated, tgts_translated
