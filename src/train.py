@@ -3,7 +3,6 @@ import time
 
 import torch
 import wandb
-from sacrebleu import corpus_bleu
 from torch import nn, optim
 from tqdm import tqdm
 
@@ -48,7 +47,11 @@ def train(args, model, data):
 
     global_step = 0
 
-    adjusted_lr = adjust_learning_rate(global_step, args.d_model, args.warmup_steps)
+    adjusted_lr = adjust_learning_rate(
+        step_num=global_step,
+        d_model=args.d_model,
+        warmup_steps=args.warmup_steps,
+    )
     criterion = nn.NLLLoss(ignore_index=0)
     optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
 
@@ -58,7 +61,9 @@ def train(args, model, data):
 
     preds_and_tgts = []
     epoch_progress_bar = tqdm(
-        iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs
+        iterable=range(args.num_epochs),
+        desc="Epochs",
+        total=args.num_epochs,
     )
     for epoch in epoch_progress_bar:
         epoch_loss = 0.0
@@ -91,6 +96,7 @@ def train(args, model, data):
             nonzero_indices = [
                 idx for idx, x in enumerate(tgt_shifted_right_last_idxs) if x != 0
             ]
+
             if nonzero_indices:
                 for idx in nonzero_indices:
                     tgt_shifted_right[idx][-1] = tokenizer.eos_id()
@@ -129,17 +135,18 @@ def train(args, model, data):
         )
 
         eval_start = time.time()
-        _, preds_translated, tgts_translated = evaluate(args, model, data, criterion)
+        _, bleu_score, preds_translated, tgts_translated = evaluate(
+            args=args,
+            model=model,
+            data=data,
+            criterion=criterion,
+        )
         eval_end = time.time()
         eval_duration = eval_end - eval_start
         eval_duration_fmt = time.strftime("%H:%M:%S", time.gmtime(eval_duration))
-        logger.info("Evaluation took approximately %s", eval_duration_fmt)
 
-        bleu_score = corpus_bleu(
-            preds_translated,
-            [tgts_translated],
-        ).score
-        wandb.log({"Evaluation BLEU": bleu_score})
+        logger.info("Evaluation took approximately %s", eval_duration_fmt)
+        logger.info("BLEU score at epoch %d: %.4f", epoch, bleu_score)
 
         if bleu_score > best_bleu:
             preds_and_tgts = [f"{p}\t{t}" for p, t in zip(best_pred, tgts_translated)]
