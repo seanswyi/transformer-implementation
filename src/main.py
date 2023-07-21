@@ -234,6 +234,13 @@ if __name__ == "__main__":
     args.log_dir = log_dir
     args.pred_tgt_dir = pred_tgt_dir
 
+    if torch.cuda.is_available():
+        args.device = "cuda"
+    elif torch.backends.mps.is_available():
+        args.device = "mps"
+    else:
+        args.device = "cpu"
+
     if not os.path.exists(args.model_save_dir):
         os.makedirs(args.model_save_dir, exist_ok=True)
 
