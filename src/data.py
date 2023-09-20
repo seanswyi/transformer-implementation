@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 
@@ -43,7 +44,11 @@ class WMT2014Dataset:
     load (list) -> tokenize (list) -> process (numpy.ndarray) -> create_batches (torch.Tensor)
     """
 
-    def __init__(self, args):
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        tokenizer: spm.SentencePieceProcessor,
+    ):
         """
         Most of the stuff is done inside this method. Every preprocessing step is carried out upon calling a WMT2014Dataset object.
 
