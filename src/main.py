@@ -6,6 +6,7 @@ from datetime import datetime
 
 import torch
 import wandb
+from dotenv import load_dotenv
 from torch import nn
 
 from data import WMT2014Dataset
@@ -13,6 +14,7 @@ from models.transformer import Transformer
 from train import train
 
 
+load_dotenv()
 logger = logging.getLogger()
 
 
@@ -247,10 +249,19 @@ if __name__ == "__main__":
     if args.wandb_name:
         log_filename = f"transformer_{args.wandb_name}_{timestamp}.log"
         args.log_filename = os.path.join(log_dir, log_filename)
-        wandb.init(project="transformer", name=args.wandb_name, config=args)
+        wandb.init(
+            project="transformer",
+            name=args.wandb_name,
+            config=args,
+            entity=os.environ["WANDB_ENTITY"],
+        )
     else:
         log_filename = f"transformer_{timestamp}.log"
         args.log_filename = os.path.join(log_dir, log_filename)
-        wandb.init(project="transformer", config=args)
+        wandb.init(
+            project="transformer",
+            config=args,
+            entity=os.environ["WANDB_ENTITY"],
+        )
 
     main(args)
