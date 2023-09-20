@@ -4,7 +4,6 @@ version = "1.0.0"
 description = "Transformer implementation."
 authors = ["Sean (Seok-Won) Yi <seantuokc@gmail.com>"]
 readme = "README.md"
-packages = [{include = "transformer_implementation"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -15,6 +14,7 @@ tqdm = "^4.65.0"
 sentencepiece = "^0.1.99"
 datasets = "^2.13.1"
 ipython = "^8.14.0"
+python-dotenv = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
