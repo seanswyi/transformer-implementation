@@ -39,3 +39,6 @@ class Tokenizer(SentencePieceProcessor):
             SentencePieceTrainer.train(train_command)
 
             self.load(f"{tokenizer_name}.model")
+
+    def tokenize(self, input_text: str) -> list[int]:
+        """Tokenizes text."""
