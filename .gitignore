@@ -9,3 +9,5 @@ src/saved_models/
 predictions/
 models/
 outputs/
+.env
+.envrc
