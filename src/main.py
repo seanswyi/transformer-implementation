@@ -213,8 +213,8 @@ if __name__ == "__main__":
         type=int,
     )
     parser.add_argument(
-        "--tokenizer_filename",
-        default="sentence_piece",
+        "--tokenizer_name",
+        default="fr-en",
         type=str,
     )
     parser.add_argument(
