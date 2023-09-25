@@ -9,7 +9,7 @@ import wandb
 from dotenv import load_dotenv
 from torch import nn
 
-from data import WMT2014Dataset
+from dataset import WMT2014Dataset
 from models.tokenizer import Tokenizer
 from models.transformer import Transformer
 from train import train
@@ -53,7 +53,7 @@ def main(args):
         vocab_size=args.vocab_size,
         tokenization_algo=args.tokenization_algo,
     )
-    data = WMT2014Dataset(args)
+    data = WMT2014Dataset(args, tokenizer=tokenizer)
     model = Transformer(args, tokenizer=tokenizer)
 
     if args.multiple_gpu:
@@ -221,7 +221,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--tokenizer_name",
-        default="fr-en",
+        default="fr-en.model",
         type=str,
     )
     parser.add_argument(
