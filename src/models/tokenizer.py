@@ -52,8 +52,25 @@ class Tokenizer(SentencePieceProcessor):
 
         if return_tensors == "pt":
             token_ids = torch.Tensor(token_ids)
+        elif return_tensors == "list":
+            pass
+        else:
+            raise NotImplementedError
 
         return token_ids
+
+    def build_inputs_with_special_tokens(
+        self, input_text: str, is_src: bool = True
+    ) -> torch.Tensor:
+        token_ids = self(input_text, return_tensors="list")
+
+        if is_src:
+            input_ids = [self.bos_id()] + token_ids + [self.eos_id()]
+        else:
+            input_ids = token_ids + [self.eos_id()]
+
+        input_ids = torch.tensor(input_ids)
+        return input_ids
 
     def tokenize(self, input_text: str) -> list[int]:
         """Convert text to token IDs."""
