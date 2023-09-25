@@ -1,5 +1,6 @@
 import logging
 
+import torch
 from sentencepiece import SentencePieceProcessor, SentencePieceTrainer
 
 
@@ -10,27 +11,25 @@ class Tokenizer(SentencePieceProcessor):
     def __init__(
         self,
         tokenizer_name: str = None,
-        raw_text_files: str = None,
+        train_text_files: str = None,
         vocab_size: int = None,
-        tokenizer_algo: str = "bpe",
+        tokenization_algo: str = "bpe",
     ):
         super().__init__()
 
-        if tokenizer_name:
+        try:
             logger.info("Loading tokenizer model from %s", tokenizer_name)
             self.load(tokenizer_name)
-        else:
+        except OSError as err:
+            logger.error("Caught OSError [%s]. Training from scratch.", err)
+
             if tokenizer_name.endswith(".model"):
                 tokenizer_name = tokenizer_name.replace(".model", "")
 
-            logger.info(
-                "Model not received, training from scratch using provided text data"
-            )
-
             train_command = (
-                f"--input={raw_text_files} "
+                f"--input={train_text_files} "
                 f"--model_prefix={tokenizer_name} "
-                f"--model_type={tokenizer_algo} "
+                f"--model_type={tokenization_algo} "
                 f"--bos_id=2 "
                 f"--eos_id=3 "
                 f"--pad_id=0 "
@@ -40,5 +39,50 @@ class Tokenizer(SentencePieceProcessor):
 
             self.load(f"{tokenizer_name}.model")
 
+        self.vocab_size = vocab_size
+        self.tokenization_algo = tokenization_algo
+
+    def __call__(
+        self,
+        input_text: str,
+        return_tensors: str = "pt",
+    ) -> list[int] | torch.Tensor:
+        """Meant to imitate the HuggingFace tokenizers."""
+        token_ids = self.tokenize(input_text)
+
+        if return_tensors == "pt":
+            token_ids = torch.Tensor(token_ids)
+        elif return_tensors == "list":
+            pass
+        else:
+            raise NotImplementedError
+
+        return token_ids
+
+    def build_inputs_with_special_tokens(
+        self, input_text: str, is_src: bool = True
+    ) -> torch.Tensor:
+        token_ids = self(input_text, return_tensors="list")
+
+        if is_src:
+            input_ids = [self.bos_id()] + token_ids + [self.eos_id()]
+        else:
+            input_ids = token_ids + [self.eos_id()]
+
+        input_ids = torch.tensor(input_ids)
+        return input_ids
+
     def tokenize(self, input_text: str) -> list[int]:
-        """Tokenizes text."""
+        """Convert text to token IDs."""
+        token_ids = self.Tokenize(input_text)
+        return token_ids
+
+    def convert_ids_to_tokens(self, ids: list[int]) -> list[str]:
+        """Convert list of token IDs to token texts."""
+        tokens = [self.Decode(id_) for id_ in ids]
+        return tokens
+
+    def decode(self, token_ids: list[int]) -> str:
+        """Receives token IDs and returns string."""
+        decoded_str = self.Decode(token_ids)
+        return decoded_str

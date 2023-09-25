@@ -1,8 +1,11 @@
-import torch.nn as nn
+import argparse
+
+from torch import nn
 
 from models.decoder import Decoder
 from models.embedding_layer import EmbeddingLayer
 from models.encoder import Encoder
+from models.tokenizer import Tokenizer
 
 
 class Transformer(nn.Module):
@@ -23,7 +26,11 @@ class Transformer(nn.Module):
     vocab_size: <int> Size of vocabulary. Default is 16,000 in this implementation.
     """
 
-    def __init__(self, args):
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        tokenizer: Tokenizer,
+    ):
         """
         Basic initialization of Transformer.
 
@@ -37,6 +44,8 @@ class Transformer(nn.Module):
         self.num_stacks = self.args.num_stacks
         self.d_model = self.args.d_model
         self.vocab_size = self.args.vocab_size
+
+        self.tokenizer = tokenizer
 
         self.emb = EmbeddingLayer(self.args)
 
@@ -105,3 +114,19 @@ class Transformer(nn.Module):
             output = self.decoder_stack[i](output, enc_output)
 
         return output
+
+    def translate(self, input_text: str) -> str:
+        """Receives raw text as input and translates it.
+
+        Arguments
+        ---------
+        input_text: str
+            Text to translate.
+
+        Returns
+        -------
+        output_text: str
+            Translated input text.
+        """
+        tokenized_text = self.tokenizer(input_text)
+        return tokenized_text

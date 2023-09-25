@@ -9,7 +9,8 @@ import wandb
 from dotenv import load_dotenv
 from torch import nn
 
-from data import WMT2014Dataset
+from dataset import WMT2014Dataset
+from models.tokenizer import Tokenizer
 from models.transformer import Transformer
 from train import train
 
@@ -46,8 +47,14 @@ def main(args):
     args_msg = f"\t{args_msg}"
     logger.info("\nArguments:\n%s", args_msg)
 
-    data = WMT2014Dataset(args)
-    model = Transformer(args)
+    tokenizer = Tokenizer(
+        tokenizer_name=args.tokenizer_name,
+        train_text_files=",".join([args.src_train_file, args.tgt_train_file]),
+        vocab_size=args.vocab_size,
+        tokenization_algo=args.tokenization_algo,
+    )
+    data = WMT2014Dataset(args, tokenizer=tokenizer)
+    model = Transformer(args, tokenizer=tokenizer)
 
     if args.multiple_gpu:
         logger.info("Using multiple GPU's!")
@@ -213,9 +220,16 @@ if __name__ == "__main__":
         type=int,
     )
     parser.add_argument(
-        "--tokenizer_filename",
-        default="sentence_piece",
+        "--tokenizer_name",
+        default="fr-en.model",
         type=str,
+    )
+    parser.add_argument(
+        "--tokenization_algo",
+        default="bpe",
+        type=str,
+        choices=["unigram", "bpe", "char", "word"],
+        help="Tokenization algorithm used to train tokenizer.",
     )
     parser.add_argument(
         "--wandb_name",
