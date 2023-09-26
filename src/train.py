@@ -4,7 +4,7 @@ import time
 import torch
 import wandb
 from torch import nn, optim
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from evaluate import evaluate
 from utils import adjust_learning_rate
@@ -60,16 +60,13 @@ def train(args, model, data):
     best_epoch = 0
 
     preds_and_tgts = []
-    epoch_progress_bar = tqdm(
-        iterable=range(args.num_epochs),
+    epoch_progress_bar = trange(
+        args.num_epochs,
         desc="Epochs",
         total=args.num_epochs,
     )
     for epoch in epoch_progress_bar:
         epoch_loss = 0.0
-
-        # Make sure to shuffle (training) data before every training epoch.
-        data.shuffle()
 
         train_progress_bar = tqdm(
             iterable=data.train_data, desc="Training", total=len(data.train_data)
