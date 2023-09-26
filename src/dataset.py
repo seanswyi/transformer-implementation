@@ -69,7 +69,6 @@ class WMT2014Dataset(Dataset):
     def build_input_ids(
         self,
         data: list[str],
-        is_src: bool = True,
     ) -> list[torch.Tensor]:
         """Builds inputs from list of strings."""
         processed_data = []
@@ -78,9 +77,7 @@ class WMT2014Dataset(Dataset):
             desc="Building inputs",
             total=len(data),
         ):
-            input_ids = self.tokenizer.build_inputs_with_special_tokens(
-                sample, is_src=is_src
-            )
+            input_ids = self.tokenizer.build_inputs_with_special_tokens(sample)
             processed_data.append(input_ids)
 
         return processed_data
