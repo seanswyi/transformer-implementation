@@ -43,8 +43,8 @@ class WMT2014Dataset(Dataset):
 
         self.src_train_input_ids = self.build_input_ids(self.src_train)
         self.src_valid_input_ids = self.build_input_ids(self.src_valid)
-        self.tgt_train_input_ids = self.build_input_ids(self.tgt_train, is_src=False)
-        self.tgt_valid_input_ids = self.build_input_ids(self.tgt_valid, is_src=False)
+        self.tgt_train_input_ids = self.build_input_ids(self.tgt_train)
+        self.tgt_valid_input_ids = self.build_input_ids(self.tgt_valid)
 
         self.train_data = self.create_dataset(
             self.src_train_input_ids, self.tgt_train_input_ids
