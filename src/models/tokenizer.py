@@ -60,15 +60,12 @@ class Tokenizer(SentencePieceProcessor):
         return token_ids
 
     def build_inputs_with_special_tokens(
-        self, input_text: str, is_src: bool = True
+        self,
+        input_text: str,
     ) -> torch.Tensor:
+        """Builds model inputs with appropriate BOS/EOS tokens."""
         token_ids = self(input_text, return_tensors="list")
-
-        if is_src:
-            input_ids = [self.bos_id()] + token_ids + [self.eos_id()]
-        else:
-            input_ids = token_ids + [self.eos_id()]
-
+        input_ids = [self.bos_id()] + token_ids + [self.eos_id()]
         input_ids = torch.tensor(input_ids)
         return input_ids
 
