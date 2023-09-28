@@ -94,7 +94,7 @@ class WMT2014Dataset(Dataset):
             total=len(data),
         ):
             if is_src:
-                input_ids = self.tokenzier(sample)
+                input_ids = self.tokenizer(sample)
             else:
                 input_ids = self.tokenizer.build_inputs_with_special_tokens(sample)
 
