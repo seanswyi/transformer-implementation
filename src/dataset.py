@@ -45,8 +45,8 @@ class WMT2014Dataset(Dataset):
 
         self.src_train_input_ids = self.build_input_ids(self.src_train)
         self.src_valid_input_ids = self.build_input_ids(self.src_valid)
-        self.tgt_train_input_ids = self.build_input_ids(self.tgt_train)
-        self.tgt_valid_input_ids = self.build_input_ids(self.tgt_valid)
+        self.tgt_train_input_ids = self.build_input_ids(self.tgt_train, is_src=False)
+        self.tgt_valid_input_ids = self.build_input_ids(self.tgt_valid, is_src=False)
 
         self.train_data = self.create_dataset(
             self.src_train_input_ids, self.tgt_train_input_ids
@@ -84,6 +84,7 @@ class WMT2014Dataset(Dataset):
     def build_input_ids(
         self,
         data: list[str],
+        is_src: bool = True,
     ) -> list[torch.Tensor]:
         """Builds inputs from list of strings."""
         processed_data = []
@@ -92,7 +93,11 @@ class WMT2014Dataset(Dataset):
             desc="Building inputs",
             total=len(data),
         ):
-            input_ids = self.tokenizer.build_inputs_with_special_tokens(sample)
+            if is_src:
+                input_ids = self.tokenzier(sample)
+            else:
+                input_ids = self.tokenizer.build_inputs_with_special_tokens(sample)
+
             processed_data.append(input_ids)
 
         return processed_data
