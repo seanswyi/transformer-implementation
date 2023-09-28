@@ -21,6 +21,16 @@ def adjust_learning_rate(step_num, d_model, warmup_steps):
     return term1 * term2
 
 
+def get_device() -> str:
+    if torch.cuda.is_available():
+        return "cuda"
+
+    if torch.backends.mps.is_available():
+        return "mps"
+
+    return "cpu"
+
+
 def decode_autoregressive(model, src):
     """
     Performs decoding in an autoregressive fashion.

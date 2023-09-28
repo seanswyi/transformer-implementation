@@ -13,6 +13,7 @@ from dataset import WMT2014Dataset
 from models.tokenizer import Tokenizer
 from models.transformer import Transformer
 from train import train
+from utils import get_device
 
 
 load_dotenv()
@@ -41,6 +42,9 @@ def main(args):
             logging.StreamHandler(),
         ],
     )
+
+    args.device = get_device()
+    logger.info("Device being used is %s", args.device)
 
     args_dict = vars(args)
     args_msg = "\n\t".join(f"{arg}: {value}" for arg, value in args_dict.items())
