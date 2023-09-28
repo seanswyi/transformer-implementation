@@ -1,7 +1,6 @@
 import logging
 import time
 
-import torch
 import wandb
 from torch import nn, optim
 from tqdm import tqdm, trange
@@ -38,11 +37,7 @@ def train(args, model, data):
     """
     tokenizer = data.tokenizer
 
-    if torch.cuda.is_available():
-        model = model.to("cuda")
-    else:
-        logger.warning("Not using GPU!")
-
+    model = model.to(args.device)
     model.train()
 
     global_step = 0
@@ -52,7 +47,7 @@ def train(args, model, data):
         d_model=args.d_model,
         warmup_steps=args.warmup_steps,
     )
-    criterion = nn.NLLLoss(ignore_index=0)
+    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_id())
     optimizer = optim.Adam(params=model.parameters(), lr=adjusted_lr)
 
     best_bleu = 0.0
@@ -69,44 +64,22 @@ def train(args, model, data):
         epoch_loss = 0.0
 
         train_progress_bar = tqdm(
-            iterable=data.train_data, desc="Training", total=len(data.train_data)
+            iterable=data.train_dataloader,
+            desc="Training",
+            total=len(data.train_data),
         )
         epoch_start = time.time()
         for batch in train_progress_bar:
             step_loss = 0.0
             optimizer.zero_grad()
 
-            src, tgt = batch[:, 0], batch[:, 1]
+            batch["src"] = batch["src"].to(args.device)
+            batch["tgt"] = batch["tgt"].to(args.device)
 
-            # Skip empty cases.
-            for sample in tgt:
-                if sum(sample).item() == 0:
-                    continue
-
-            bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
-            tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[
-                :, :-1
-            ]  # Truncate last token to match size.
-
-            # Find case where there is no padding and append EOS token.
-            tgt_shifted_right_last_idxs = tgt_shifted_right[:, -1].long().tolist()
-            nonzero_indices = [
-                idx for idx, x in enumerate(tgt_shifted_right_last_idxs) if x != 0
-            ]
-
-            if nonzero_indices:
-                for idx in nonzero_indices:
-                    tgt_shifted_right[idx][-1] = tokenizer.eos_id()
-
-            if torch.cuda.is_available():
-                src = src.to("cuda")
-                tgt = tgt.to("cuda")
-                tgt_shifted_right = tgt_shifted_right.to("cuda")
-            else:
-                logger.warning("Not using GPU!")
-
-            output = model(src, tgt_shifted_right)
-            loss = criterion(output.view(-1, args.vocab_size), tgt.view(-1).long())
+            output = model(**batch)
+            loss = criterion(
+                output.view(-1, args.vocab_size), batch["tgt"].view(-1).long()
+            )
             step_loss += loss.item()
             epoch_loss += loss.item()
 
@@ -128,7 +101,10 @@ def train(args, model, data):
         epoch_duration = epoch_end - epoch_start
         epoch_duration_fmt = time.strftime("%H:%M:%S", time.gmtime(epoch_duration))
         logger.info(
-            "Epoch %d took %s and has loss: %.4f", epoch, epoch_duration_fmt, epoch_loss
+            "Epoch %d took %s and has loss: %.4f",
+            epoch,
+            epoch_duration_fmt,
+            epoch_loss,
         )
 
         eval_start = time.time()
