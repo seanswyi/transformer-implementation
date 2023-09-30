@@ -66,7 +66,7 @@ def train(args, model, data):
         train_progress_bar = tqdm(
             iterable=data.train_dataloader,
             desc="Training",
-            total=len(data.train_data),
+            total=len(data.train_dataloader),
         )
         epoch_start = time.time()
         for batch in train_progress_bar:
