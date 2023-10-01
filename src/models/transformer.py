@@ -1,6 +1,8 @@
 import argparse
 
+import torch
 from torch import nn
+from torch.nn import functional as F
 
 from models.decoder import Decoder
 from models.embedding_layer import EmbeddingLayer
@@ -46,6 +48,7 @@ class Transformer(nn.Module):
         self.vocab_size = self.args.vocab_size
 
         self.tokenizer = tokenizer
+        self.bos_token_id = tokenizer.bos_id()
 
         self.emb = EmbeddingLayer(self.args)
 
@@ -83,9 +86,8 @@ class Transformer(nn.Module):
         enc_output = self.encode(src_emb)
         dec_output = self.decode(tgt_emb, enc_output)
 
-        output2 = self.dropout(self.output_linear(dec_output))
-
-        return self.softmax(output2)
+        logits = self.dropout(self.output_linear(dec_output))
+        return logits
 
     def encode(self, src):
         """
@@ -115,18 +117,38 @@ class Transformer(nn.Module):
 
         return output
 
-    def translate(self, input_text: str) -> str:
+    def translate(
+        self,
+        input_text: str | torch.tensor,
+        device: str = "cpu",
+    ) -> str:
         """Receives raw text as input and translates it.
 
         Arguments
         ---------
-        input_text: str
-            Text to translate.
+        input_text: str | torch.tensor
+            Text to translate. It may be a raw text or a pre-processed tensor.
 
         Returns
         -------
-        output_text: str
+        translated_text: str
             Translated input text.
         """
-        tokenized_text = self.tokenizer(input_text)
-        return tokenized_text
+        if isinstance(input_text, str):
+            src = self.tokenizer.tokenize(input_text)
+            src = torch.tensor(src)
+        else:
+            src = input_text
+
+        tgt = torch.ones(size=(input_text.shape[0],)).reshape(-1, 1) * self.bos_token_id
+
+        src = src.to(device)
+        tgt = tgt.to(device)
+
+        for _ in range(src.shape[0]):
+            pred = F.softmax(self(src, tgt), dim=2)
+            pred = torch.argmax(pred, dim=2)[:, -1]
+            tgt = torch.cat((tgt, pred.view(-1, 1)), dim=-1)
+
+        translated_text = self.tokenizer.decode(tgt[:, 1:])
+        return translated_text
