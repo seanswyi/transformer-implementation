@@ -33,8 +33,9 @@ def evaluate(args, model, data, criterion):
     Evaluation is conducted using an autoregressive decoding strategy. For more information \
         regarding the decoding, please refer to utils.decode_autoregressive.
     """
-    valid_data = data.valid_data
     tokenizer = data.tokenizer
+
+    model = model.to(args.device)
     model.eval()
 
     eval_loss = 0.0
@@ -43,49 +44,27 @@ def evaluate(args, model, data, criterion):
 
     with torch.no_grad():
         eval_progress_bar = tqdm(
-            iterable=valid_data,
+            iterable=data.valid_dataloader,
             desc="Evaluating",
-            total=len(valid_data),
+            total=len(data.valid_dataloader),
         )
         for batch in eval_progress_bar:
-            src, tgt = batch[:, 0], batch[:, 1]
-            bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
-            tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[
-                :, :-1
-            ]  # Truncate last token to match size.
+            batch["src"] = batch["src"].to(args.device)
+            batch["tgt"] = batch["tgt"].to(args.device)
 
-            # Skip empty cases.
-            for thing in tgt_shifted_right:
-                if sum(thing) == 2:
-                    continue
+            output = model(**batch)
+            loss = criterion(
+                output.view(-1, args.vocab_size), batch["tgt"].view(-1).long()
+            )
 
-            # Find case where there is no padding and append EOS token.
-            tgt_shifted_right_last_idxs = tgt_shifted_right[:, -1].long().tolist()
-            nonzero_indices = [
-                idx for idx, x in enumerate(tgt_shifted_right_last_idxs) if x != 0
-            ]
-            if nonzero_indices:
-                for idx in nonzero_indices:
-                    tgt_shifted_right[idx][-1] = tokenizer.eos_id()
-
-            if torch.cuda.is_available():
-                src = src.to("cuda")
-                tgt = tgt.to("cuda")
-                tgt_shifted_right = tgt_shifted_right.to("cuda")
-            else:
-                logger.warning("Not using GPU!")
-
-            output = model(src, tgt_shifted_right)
-            loss = criterion(output.view(-1, args.vocab_size), tgt.view(-1).long())
             eval_loss += loss.item()
 
-            decoded_outputs = decode_autoregressive(model=model, src=src)
-
+            decoded_outputs = decode_autoregressive(model=model, src=batch["src"])
             predictions = convert_ids_to_tokens(
                 data=decoded_outputs,
                 tokenizer=tokenizer,
             )
-            targets = convert_ids_to_tokens(data=tgt, tokenizer=tokenizer)
+            targets = convert_ids_to_tokens(data=batch["tgt"], tokenizer=tokenizer)
             preds_translated.extend(predictions)
             tgts_translated.extend(targets)
 
