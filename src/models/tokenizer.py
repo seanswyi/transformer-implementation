@@ -82,12 +82,19 @@ class Tokenizer(SentencePieceProcessor):
         token_ids = self.Tokenize(input_text)
         return token_ids
 
-    def convert_ids_to_tokens(self, ids: list[int]) -> list[str]:
-        """Convert list of token IDs to token texts."""
-        tokens = [self.Decode(id_) for id_ in ids]
-        return tokens
-
-    def decode(self, token_ids: list[int]) -> str:
+    def decode_ids(
+        self,
+        token_ids: list[int] | torch.Tensor,
+    ) -> str:
         """Receives token IDs and returns string."""
-        decoded_str = self.Decode(token_ids)
+        if isinstance(token_ids, torch.Tensor):
+            token_ids = token_ids.long()
+            token_ids = token_ids.detach().cpu()
+            token_ids = token_ids.tolist()
+        elif isinstance(token_ids, list):
+            pass
+        else:
+            raise NotImplementedError
+
+        decoded_str = self.decode(token_ids)
         return decoded_str
