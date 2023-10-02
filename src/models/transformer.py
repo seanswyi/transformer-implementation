@@ -119,7 +119,7 @@ class Transformer(nn.Module):
 
     def translate(
         self,
-        input_text: str | torch.tensor,
+        input_text: str | torch.Tensor,
         device: str = "cpu",
     ) -> str:
         """Receives raw text as input and translates it.
@@ -137,8 +137,10 @@ class Transformer(nn.Module):
         if isinstance(input_text, str):
             src = self.tokenizer.tokenize(input_text)
             src = torch.tensor(src)
-        else:
+        elif isinstance(input_text, torch.Tensor):
             src = input_text
+        else:
+            raise NotImplementedError
 
         tgt = torch.ones(size=(input_text.shape[0],)).reshape(-1, 1) * self.bos_token_id
 
