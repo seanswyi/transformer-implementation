@@ -152,5 +152,10 @@ class Transformer(nn.Module):
             pred = torch.argmax(pred, dim=2)[:, -1]
             tgt = torch.cat((tgt, pred.view(-1, 1)), dim=-1)
 
-        translated_text = self.tokenizer.decode(tgt[:, 1:])
+        # In order for SetntencePiece to properly work inputs need to be integers and lists.
+        tgt = tgt.long()
+        tgt = tgt.detach().cpu()
+        tgt = tgt[:, 1:].tolist()
+
+        translated_text = self.tokenizer.decode(tgt)
         return translated_text
