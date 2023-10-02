@@ -63,8 +63,16 @@ class Tokenizer(SentencePieceProcessor):
         self,
         input_text: str,
     ) -> torch.Tensor:
-        """Builds model inputs with appropriate BOS/EOS tokens."""
-        token_ids = self(input_text, return_tensors="list")
+        """Builds model inputs with appropriate BOS/EOS tokens.
+
+        The try-except block is used to cover both cases where the input \
+            is a string and a list of token IDs.
+        """
+        try:
+            token_ids = self(input_text, return_tensors="list")
+        except TypeError:
+            token_ids = input_text
+
         input_ids = [self.bos_id()] + token_ids + [self.eos_id()]
         input_ids = torch.tensor(input_ids)
         return input_ids
