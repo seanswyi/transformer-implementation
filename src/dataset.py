@@ -6,7 +6,6 @@ import sentencepiece as spm
 import torch
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm
 
 
 logger = logging.getLogger()
@@ -87,20 +86,17 @@ class WMT2014Dataset(Dataset):
         is_src: bool = True,
     ) -> list[torch.Tensor]:
         """Builds inputs from list of strings."""
-        processed_data = []
-        for sample in tqdm(
-            iterable=data,
-            desc="Building inputs",
-            total=len(data),
-        ):
-            if is_src:
-                input_ids = self.tokenizer(sample)
-            else:
-                input_ids = self.tokenizer.build_inputs_with_special_tokens(sample)
+        input_ids = self.tokenizer(data, return_tensors="list")
 
-            processed_data.append(input_ids)
+        if not is_src:
+            output = [
+                self.tokenizer.build_inputs_with_special_tokens(input_id)
+                for input_id in input_ids
+            ]
+        else:
+            output = [torch.tensor(input_id) for input_id in input_ids]
 
-        return processed_data
+        return output
 
     def create_dataset(
         self,

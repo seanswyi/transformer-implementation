@@ -63,8 +63,16 @@ class Tokenizer(SentencePieceProcessor):
         self,
         input_text: str,
     ) -> torch.Tensor:
-        """Builds model inputs with appropriate BOS/EOS tokens."""
-        token_ids = self(input_text, return_tensors="list")
+        """Builds model inputs with appropriate BOS/EOS tokens.
+
+        The try-except block is used to cover both cases where the input \
+            is a string and a list of token IDs.
+        """
+        try:
+            token_ids = self(input_text, return_tensors="list")
+        except TypeError:
+            token_ids = input_text
+
         input_ids = [self.bos_id()] + token_ids + [self.eos_id()]
         input_ids = torch.tensor(input_ids)
         return input_ids
@@ -74,12 +82,19 @@ class Tokenizer(SentencePieceProcessor):
         token_ids = self.Tokenize(input_text)
         return token_ids
 
-    def convert_ids_to_tokens(self, ids: list[int]) -> list[str]:
-        """Convert list of token IDs to token texts."""
-        tokens = [self.Decode(id_) for id_ in ids]
-        return tokens
-
-    def decode(self, token_ids: list[int]) -> str:
+    def decode_ids(
+        self,
+        token_ids: list[int] | torch.Tensor,
+    ) -> str:
         """Receives token IDs and returns string."""
-        decoded_str = self.Decode(token_ids)
+        if isinstance(token_ids, torch.Tensor):
+            token_ids = token_ids.long()
+            token_ids = token_ids.detach().cpu()
+            token_ids = token_ids.tolist()
+        elif isinstance(token_ids, list):
+            pass
+        else:
+            raise NotImplementedError
+
+        decoded_str = self.decode(token_ids)
         return decoded_str
