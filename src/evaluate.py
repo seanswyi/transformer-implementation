@@ -6,9 +6,6 @@ import wandb
 from sacrebleu import corpus_bleu
 from tqdm import tqdm
 
-from translate import convert_ids_to_tokens
-from utils import decode_autoregressive
-
 
 logger = logging.getLogger()
 
@@ -39,8 +36,8 @@ def evaluate(args, model, data, criterion):
     model.eval()
 
     eval_loss = 0.0
-    preds_translated = []
-    tgts_translated = []
+    pred_texts = []
+    tgts = []
 
     with torch.no_grad():
         eval_progress_bar = tqdm(
@@ -53,35 +50,27 @@ def evaluate(args, model, data, criterion):
             batch["tgt"] = batch["tgt"].to(args.device)
 
             output = model(**batch)
+
             loss = criterion(
                 output.view(-1, args.vocab_size), batch["tgt"].view(-1).long()
             )
-
             eval_loss += loss.item()
 
-            decoded_outputs = decode_autoregressive(model=model, src=batch["src"])
-            predictions = convert_ids_to_tokens(
-                data=decoded_outputs,
-                tokenizer=tokenizer,
-            )
-            targets = convert_ids_to_tokens(data=batch["tgt"], tokenizer=tokenizer)
-            preds_translated.extend(predictions)
-            tgts_translated.extend(targets)
+            translated_texts = model.translate(batch["src"], device=args.device)
+            decoded_tgts = tokenizer.decode_ids(batch["tgt"])
 
-        assert len(preds_translated) == len(
-            tgts_translated
-        ), "Lens of preds and tgts don't match!"
-        sample_idxs = random.sample(population=range(len(preds_translated)), k=5)
+            pred_texts.extend(translated_texts)
+            tgts.extend(decoded_tgts)
+
+        assert len(pred_texts) == len(tgts), "Lens of preds and tgts don't match!"
+        sample_idxs = random.sample(population=range(len(pred_texts)), k=5)
         for idx in sample_idxs:
-            sample_str = f"Pred: {preds_translated[idx]}\nTgt: {tgts_translated[idx]}"
+            sample_str = f"Pred: {pred_texts[idx]}\nTgt: {tgts[idx]}"
             logger.info("Sampled pred and tgt:\n%s", sample_str)
 
         wandb.log({"Evaluation Loss": eval_loss})
 
-    bleu_score = corpus_bleu(
-        preds_translated,
-        [tgts_translated],
-    ).score
+    bleu_score = corpus_bleu(pred_texts, [tgts]).score
     wandb.log({"Evaluation BLEU": bleu_score})
 
-    return eval_loss, bleu_score, preds_translated, tgts_translated
+    return eval_loss, bleu_score, pred_texts, tgts
