@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch import nn
 
 
 def adjust_learning_rate(step_num, d_model, warmup_steps):
@@ -28,3 +29,11 @@ def get_device() -> str:
         return "mps"
 
     return "cpu"
+
+
+def xavier_init_model(model):
+    for param in model.parameters():
+        try:
+            nn.init.xavier_uniform_(param)
+        except ValueError:
+            pass
