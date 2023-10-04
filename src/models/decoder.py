@@ -1,4 +1,5 @@
-import torch.nn as nn
+import torch
+from torch import nn
 
 from models.feedforwardnn import FeedForwardNN
 from models.multihead_attention import MultiHeadAttention
@@ -30,10 +31,16 @@ class Decoder(nn.Module):
         self.ffnn = FeedForwardNN(args)
         self.layernorm = nn.LayerNorm(normalized_shape=args.d_model)
         self.multihead_attention = MultiHeadAttention(args=args)
-        self.masked_multihead_attention = MultiHeadAttention(args=args, mask=True)
+        self.masked_multihead_attention = MultiHeadAttention(args=args)
         self.dropout = nn.Dropout(p=0.1)
 
-    def forward(self, x, enc_x):
+    def forward(
+        self,
+        x: torch.Tensor,
+        enc_x: torch.Tensor,
+        combined_mask: torch.Tensor,
+        padding_mask: torch.Tensor,
+    ) -> torch.Tensor:
         """
         Forward pass for decoding.
 
@@ -46,10 +53,10 @@ class Decoder(nn.Module):
         -------
         <torch.Tensor> Output after one layer of decoding.
         """
-        attn_output = self.masked_multihead_attention(x, x, x)
+        attn_output = self.masked_multihead_attention(x, x, x, mask=combined_mask)
         output1 = self.layernorm(x + attn_output)
 
-        attn_output2 = self.multihead_attention(x, enc_x, enc_x)
+        attn_output2 = self.multihead_attention(x, enc_x, enc_x, mask=padding_mask)
         output2 = self.layernorm(attn_output2 + output1)
 
         output3 = self.layernorm(output2 + self.dropout(self.ffnn(output2)))
