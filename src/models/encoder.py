@@ -1,4 +1,5 @@
-import torch.nn as nn
+import torch
+from torch import nn
 
 from models.feedforwardnn import FeedForwardNN
 from models.multihead_attention import MultiHeadAttention
@@ -31,7 +32,11 @@ class Encoder(nn.Module):
         self.multihead_attention = MultiHeadAttention(args=args)
         self.dropout = nn.Dropout(p=0.1)
 
-    def forward(self, x):
+    def forward(
+        self,
+        x: torch.Tensor,
+        padding_mask: torch.Tensor,
+    ) -> torch.Tensor:
         """
         Forward pass for encoding.
 
@@ -43,7 +48,7 @@ class Encoder(nn.Module):
         -------
         <torch.Tensor> Output after one layer of decoding.
         """
-        attn_output = self.dropout(self.multihead_attention(x, x, x))
+        attn_output = self.dropout(self.multihead_attention(x, x, x, mask=padding_mask))
         output1 = self.layernorm(x + attn_output)
         output2 = self.layernorm(output1 + self.dropout(self.ffnn(output1)))
 
