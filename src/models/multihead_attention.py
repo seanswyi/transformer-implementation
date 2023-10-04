@@ -1,15 +1,22 @@
+import argparse
 import logging
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
+from torch.nn import functional as F
 
 
 logger = logging.getLogger()
 
 
-def attention(q, k, v, d_k, mask=False):
+def attention(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    d_k: int,
+    mask: torch.Tensor = None,
+) -> torch.Tensor:
     """
     Function to perform scaled dot-product attention.
 
@@ -35,15 +42,8 @@ def attention(q, k, v, d_k, mask=False):
     qk /= np.sqrt(d_k)
 
     if mask:
-        ones = torch.ones(size=qk.shape)
-        mask_matrix = torch.triu(ones, diagonal=1) * (-1e9)
-
-        if qk.is_cuda:
-            mask_matrix = mask_matrix.to("cuda")
-        else:
-            logger.warning("Not using GPU!")
-
-        qk += mask_matrix
+        mask = mask.to(qk.device)
+        qk.masked_fill_(mask, float("-inf"))
 
     qk = F.softmax(qk, dim=-1)
 
@@ -70,7 +70,7 @@ class SingleHeadAttention(nn.Module):
     num_heads: <int> Number of heads. 8 as per the paper.
     """
 
-    def __init__(self, args, mask=False):
+    def __init__(self, args: argparse.Namespace) -> None:
         """
         Basic initialization of SingleHeadAttention.
 
@@ -84,7 +84,6 @@ class SingleHeadAttention(nn.Module):
         """
         super().__init__()
 
-        self.mask = mask
         self.d_model = args.d_model
         self.num_heads = args.num_heads
 
@@ -98,7 +97,13 @@ class SingleHeadAttention(nn.Module):
 
         self.dropout = nn.Dropout(p=0.1)
 
-    def forward(self, q, k, v):
+    def forward(
+        self,
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        mask: torch.Tensor = None,
+    ) -> torch.Tensor:
         """
         Forward pass for SingleHeadAttention.
 
@@ -116,7 +121,7 @@ class SingleHeadAttention(nn.Module):
         k = self.WK(k)
         v = self.WV(v)
 
-        output = self.dropout(attention(q, k, v, d_k=self.d_k, mask=self.mask))
+        output = self.dropout(attention(q, k, v, d_k=self.d_k, mask=mask))
 
         return output
 
@@ -135,7 +140,7 @@ class MultiHeadAttention(nn.Module):
     num_heads: <int> Number of heads. 8 as per the paper.
     """
 
-    def __init__(self, args, mask=False):
+    def __init__(self, args: argparse.Namespace) -> None:
         """
         Basic initialization of MultiHeadAttention.
 
@@ -149,21 +154,27 @@ class MultiHeadAttention(nn.Module):
         """
         super().__init__()
 
-        self.mask = mask
         self.d_model = args.d_model
         self.num_heads = args.num_heads
         self.d_v = int(self.d_model / self.num_heads)
 
         self.WO = nn.Linear(
-            in_features=(self.num_heads * self.d_v), out_features=self.d_model
+            in_features=(self.num_heads * self.d_v),
+            out_features=self.d_model,
         )
         nn.init.xavier_uniform_(self.WO.weight)
 
         self.attention_heads = nn.ModuleList(
-            [SingleHeadAttention(args, mask=self.mask) for _ in range(self.num_heads)]
+            [SingleHeadAttention(args) for _ in range(self.num_heads)]
         )
 
-    def forward(self, q, k, v):
+    def forward(
+        self,
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        mask: torch.Tensor = None,
+    ) -> torch.Tensor:
         """
         Forward pass for MultiHeadAttention.
 
@@ -177,7 +188,7 @@ class MultiHeadAttention(nn.Module):
         -------
         output: <torch.Tensor> Output after performing self-attention for all head and linear projecting the output.
         """
-        attention_results = [head(q, k, v) for head in self.attention_heads]
+        attention_results = [head(q, k, v, mask=mask) for head in self.attention_heads]
         attention_concatenated = torch.cat(attention_results, dim=2)
         output = self.WO(attention_concatenated)
 
