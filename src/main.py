@@ -13,7 +13,7 @@ from dataset import WMT2014Dataset
 from models.tokenizer import Tokenizer
 from models.transformer import Transformer
 from train import train
-from utils import get_device
+from utils import get_device, xavier_init_model
 
 
 load_dotenv()
@@ -59,6 +59,7 @@ def main(args):
     )
     data = WMT2014Dataset(args, tokenizer=tokenizer)
     model = Transformer(args, tokenizer=tokenizer)
+    model.apply(xavier_init_model)
 
     if args.multiple_gpu:
         logger.info("Using multiple GPU's!")
@@ -115,7 +116,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--batch_size",
-        default=128,
+        default=64,
         type=int,
     )
     parser.add_argument(
