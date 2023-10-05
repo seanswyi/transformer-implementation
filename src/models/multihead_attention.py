@@ -41,12 +41,16 @@ def attention(
     qk = torch.matmul(q, k.transpose(2, 1))
     qk /= np.sqrt(d_k)
 
-    if mask:
+    if mask is not None:
         mask = mask.to(qk.device)
-        qk.masked_fill_(mask, float("-inf"))
+
+        # We have to unsqueeze padding mask for broadcasting.
+        try:
+            qk += mask
+        except RuntimeError:
+            qk += mask.unsqueeze(-1)
 
     qk = F.softmax(qk, dim=-1)
-
     output = torch.matmul(qk, v)
 
     return output
