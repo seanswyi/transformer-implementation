@@ -35,7 +35,7 @@ class Encoder(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        padding_mask: torch.Tensor,
+        mask: torch.Tensor,
     ) -> torch.Tensor:
         """
         Forward pass for encoding.
@@ -48,7 +48,7 @@ class Encoder(nn.Module):
         -------
         <torch.Tensor> Output after one layer of decoding.
         """
-        attn_output = self.dropout(self.multihead_attention(x, x, x, mask=padding_mask))
+        attn_output = self.dropout(self.multihead_attention(x, x, x, mask=mask))
         output1 = self.layernorm(x + attn_output)
         output2 = self.layernorm(output1 + self.dropout(self.ffnn(output1)))
 
