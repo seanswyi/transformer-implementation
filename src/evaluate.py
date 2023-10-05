@@ -56,7 +56,17 @@ def evaluate(args, model, data, criterion):
             )
             eval_loss += loss.item()
 
-            translated_texts = model.translate(batch["src"], device=args.device)
+            try:
+                translated_texts = model.translate(
+                    batch["src"],
+                    device=args.device,
+                )
+            except AttributeError:
+                translated_texts = model.module.translate(
+                    batch["src"],
+                    device=args.device,
+                )
+
             decoded_tgts = tokenizer.decode_ids(batch["tgt"])
 
             pred_texts.extend(translated_texts)
