@@ -49,22 +49,39 @@ class Transformer(nn.Module):
 
         self.tokenizer = tokenizer
         self.bos_token_id = tokenizer.bos_id()
+        self.pad_token_id = tokenizer.pad_id()
 
         self.emb = EmbeddingLayer(self.args)
 
         encoders = [Encoder(self.args) for _ in range(self.num_stacks)]
-        self.encoder_stack = nn.Sequential(*encoders)
+        self.encoder_stack = nn.ModuleList(encoders)
 
         decoders = [Decoder(self.args) for _ in range(self.num_stacks)]
         self.decoder_stack = nn.ModuleList(decoders)
 
         self.output_linear = nn.Linear(
-            in_features=self.d_model, out_features=self.vocab_size, bias=False
+            in_features=self.d_model,
+            out_features=self.vocab_size,
+            bias=False,
         )
         self.output_linear.weight = self.emb.embedding_layer.weight
 
         self.softmax = nn.LogSoftmax(dim=-1)
         self.dropout = nn.Dropout(p=0.1)
+
+    def create_masks(self, seq: torch.Tensor):
+        """Creates a mask that incorporates padding and causal masking."""
+        batch_size, seq_len = seq.shape
+
+        padding_mask = (seq == self.pad_token_id) * (-1e9)
+
+        ones = torch.ones(size=(batch_size, seq_len, seq_len))
+        causal_mask = torch.triu(ones, diagonal=1) * (-1e9)
+        causal_mask = causal_mask.to(padding_mask.device)
+
+        combined_mask = padding_mask.unsqueeze(-1) + causal_mask
+
+        return padding_mask, combined_mask
 
     def forward(self, src, tgt):
         """
@@ -80,16 +97,27 @@ class Transformer(nn.Module):
         <torch.Tensor> Output passed through LogSoftmax layer. Note that if we're using cross entropy loss \
             that means we'll have to set our loss function to negative log likelihood due to this.
         """
+        padding_mask, combined_mask = self.create_masks(src)
+
         src_emb = self.emb(src.long())
         tgt_emb = self.emb(tgt.long())
 
-        enc_output = self.encode(src_emb)
-        dec_output = self.decode(tgt_emb, enc_output)
+        enc_output = self.encode(src_emb, mask=padding_mask)
+        dec_output = self.decode(
+            tgt_emb,
+            enc_output,
+            padding_mask=padding_mask,
+            combined_mask=combined_mask,
+        )
 
         logits = self.dropout(self.output_linear(dec_output))
         return logits
 
-    def encode(self, src):
+    def encode(
+        self,
+        src: torch.Tensor,
+        mask: torch.Tensor = None,
+    ) -> torch.Tensor:
         """
         Performs neural encoding of the source sequence. Note we can use the Sequential module \
             because there's only one chosen input.
@@ -98,10 +126,19 @@ class Transformer(nn.Module):
         ---------
         src: <torch.Tensor> Source data.
         """
-        output = self.encoder_stack(src)
+        output = src
+        for i in range(self.num_stacks):
+            output = self.encoder_stack[i](output, mask=mask)
+
         return output
 
-    def decode(self, tgt, enc_output):
+    def decode(
+        self,
+        tgt: torch.Tensor,
+        enc_output: torch.Tensor,
+        padding_mask: torch.Tensor = None,
+        combined_mask: torch.Tensor = None,
+    ) -> torch.Tensor:
         """
         Performs neural decoding of the target sequence. Note we have to use ModuleList and loop \
             through because we have two inputs.
@@ -113,7 +150,12 @@ class Transformer(nn.Module):
         """
         output = tgt
         for i in range(self.num_stacks):
-            output = self.decoder_stack[i](output, enc_output)
+            output = self.decoder_stack[i](
+                output,
+                enc_output,
+                padding_mask=padding_mask,
+                combined_mask=combined_mask,
+            )
 
         return output
 
