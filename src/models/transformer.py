@@ -97,17 +97,18 @@ class Transformer(nn.Module):
         <torch.Tensor> Output passed through LogSoftmax layer. Note that if we're using cross entropy loss \
             that means we'll have to set our loss function to negative log likelihood due to this.
         """
-        padding_mask, combined_mask = self.create_masks(src)
+        src_padding_mask, _ = self.create_masks(src)
+        tgt_padding_mask, tgt_combined_mask = self.create_masks(tgt)
 
         src_emb = self.emb(src.long())
         tgt_emb = self.emb(tgt.long())
 
-        enc_output = self.encode(src_emb, mask=padding_mask)
+        enc_output = self.encode(src_emb, mask=src_padding_mask)
         dec_output = self.decode(
             tgt_emb,
             enc_output,
-            padding_mask=padding_mask,
-            combined_mask=combined_mask,
+            padding_mask=tgt_padding_mask,
+            combined_mask=tgt_combined_mask,
         )
 
         logits = self.dropout(self.output_linear(dec_output))
