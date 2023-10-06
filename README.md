@@ -1,10 +1,12 @@
 # Transformer Implementation :car:
 
+# WARNING
+
+I recently decided to refactor this repository and expand it. The current code as it is is buggy and unreliable.
+
 ### Personal implementation of the Transformer paper in PyTorch.
 
 **Original paper: [_Attention is All You Need (Vaswani et al., 2017)_](https://arxiv.org/pdf/1706.03762.pdf)**
-
-**Thoughts write up: https://seanyi.info/posts/transformer-implementation/**
 
 Please feel free to contact me regarding any questions or comments. Feedback is always appreciated!
 
