@@ -112,6 +112,7 @@ class Transformer(nn.Module):
         )
 
         logits = self.dropout(self.output_linear(dec_output))
+
         return logits
 
     def encode(
