@@ -30,6 +30,7 @@ class Tokenizer(SentencePieceProcessor):
                 f"--input={train_text_files} "
                 f"--model_prefix={tokenizer_name} "
                 f"--model_type={tokenization_algo} "
+                f"--vocab_size={vocab_size} "
                 f"--bos_id=2 "
                 f"--eos_id=3 "
                 f"--pad_id=0 "
