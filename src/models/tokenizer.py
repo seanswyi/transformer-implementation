@@ -63,6 +63,7 @@ class Tokenizer(SentencePieceProcessor):
     def build_inputs_with_special_tokens(
         self,
         input_text: str,
+        is_src: bool = True,
     ) -> torch.Tensor:
         """Builds model inputs with appropriate BOS/EOS tokens.
 
@@ -74,7 +75,11 @@ class Tokenizer(SentencePieceProcessor):
         except TypeError:
             token_ids = input_text
 
-        input_ids = [self.bos_id()] + token_ids + [self.eos_id()]
+        if is_src:
+            input_ids = token_ids + [self.eos_id()]
+        else:
+            input_ids = [self.bos_id()] + token_ids
+
         input_ids = torch.tensor(input_ids)
         return input_ids
 
