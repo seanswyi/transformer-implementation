@@ -301,9 +301,10 @@ def main(args):
 
     # If we evaluated during training, write predictions.
     if best_pred:
-        pred_filename = f"../predictions/{args.wandb_name}_pred_epoch{best_epoch}.txt"
-        logger.info(f"Writing predictions and targets to {pred_filename}.")
-        with open(file=pred_filename, mode="w") as f:
+        results_filename = f"{args.wandb_name}_results-epoch-{best_epoch}.txt"
+        results_filepath = os.path.join(args.outputs_dir, results_filename)
+        logger.info(f"Writing predictions and targets to {results_filepath}.")
+        with open(file=results_filepath, mode="w") as f:
             f.write("\n".join(best_pred) + "\n")
 
     model_file_name = args.log_filename.split("/")[-1]
@@ -319,7 +320,19 @@ def main(args):
 
 if __name__ == "__main__":
     right_now = time.time()
-    timestamp = datetime.fromtimestamp(right_now).strftime("%m%d%Y-%H%M")
+    timestamp = datetime.fromtimestamp(right_now).strftime("%m-%d-%Y-%H%M")
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.join(current_dir, "..")
+    data_dir = os.path.join(parent_dir, "data")
+    log_dir = os.path.join(parent_dir, "logs")
+    outputs_dir = os.path.join(parent_dir, "outputs")
+
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+
+    if not os.path.exists(outputs_dir):
+        os.makedirs(outputs_dir, exist_ok=True)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", default=128, type=int)
@@ -355,15 +368,29 @@ if __name__ == "__main__":
     parser.add_argument("--tokenizer_filename", default="sentence_piece", type=str)
     parser.add_argument("--wandb_name", default="", type=str)
     parser.add_argument("--warmup_steps", default=4000, type=int)
+
     args = parser.parse_args()
+
+    args.current_dir = current_dir
+    args.parent_dir = parent_dir
+    args.data_dir = data_dir
+    args.log_dir = log_dir
+    args.outputs_dir = outputs_dir
 
     logger.info(args)
 
     if args.wandb_name:
-        args.log_filename = f"../logs/{args.wandb_name}_{timestamp}"
-        wandb.init(project="transformer", name=args.wandb_name, config=args)
+        args.wandb_name = f"{args.wandb_name}_{timestamp}"
     else:
-        args.log_filename = f"../logs/{timestamp}"
-        wandb.init(project="transformer", config=args)
+        args.wandb_name = f"transformer_{timestamp}"
+
+    log_filename = f"{args.wandb_name}.log"
+    args.log_filename = os.path.join(log_dir, log_filename)
+    wandb.init(
+        project="transformer",
+        name=args.wandb_name,
+        config=args,
+        entity=os.environ["WANDB_ENTITY"],
+    )
 
     main(args)
