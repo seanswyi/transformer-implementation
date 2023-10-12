@@ -5,18 +5,19 @@ import time
 from datetime import datetime
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 import wandb
+from dataset import WMT2014Dataset
+from dotenv import load_dotenv
 from sacrebleu import corpus_bleu
+from torch import nn, optim
+from torch.nn import functional as F
 from tqdm import tqdm
 
-from data import WMT2014Dataset
 from models.transformer import Transformer
 from utils import adjust_learning_rate, decode_autoregressive, translate
 
 
+load_dotenv()
 logger = logging.getLogger()
 
 
