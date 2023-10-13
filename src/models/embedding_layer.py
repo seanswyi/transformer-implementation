@@ -18,6 +18,7 @@ class EmbeddingLayer(nn.Module):
         We set `padding_idx` to be 0 because we want to tell our embedding layer which index is reserved for padding sequences.
     positional_encoding_layer: <method> Adds the sinusoidal positional values to the embeddings.
     """
+
     def __init__(self, args):
         """
         Basic initialization of what we need.
@@ -29,7 +30,9 @@ class EmbeddingLayer(nn.Module):
         super().__init__()
 
         self.args = args
-        self.embedding_layer = nn.Embedding(num_embeddings=args.vocab_size, embedding_dim=args.d_model, padding_idx=0)
+        self.embedding_layer = nn.Embedding(
+            num_embeddings=args.vocab_size, embedding_dim=args.d_model, padding_idx=0
+        )
 
     def forward(self, x):
         """
@@ -64,7 +67,9 @@ class EmbeddingLayer(nn.Module):
         dimensions = np.arange(x.shape[2])
 
         denominator = np.power(10000, (2 * dimensions) / self.args.d_model)
-        input_angles = positions.reshape(-1, 1) / denominator.reshape(1, -1) # We want shape (sequence_length, d_model)
+        input_angles = positions.reshape(-1, 1) / denominator.reshape(
+            1, -1
+        )  # We want shape (sequence_length, d_model)
 
         positional_encoding_values = np.zeros(shape=input_angles.shape)
         positional_encoding_values[:, 0::2] = np.sin(input_angles[:, 0::2])
@@ -72,7 +77,7 @@ class EmbeddingLayer(nn.Module):
         positional_encoding_values = torch.tensor(positional_encoding_values)
 
         if torch.cuda.is_available():
-            positional_encoding_values = positional_encoding_values.to('cuda')
+            positional_encoding_values = positional_encoding_values.to("cuda")
         else:
             logger.warning("Not using GPU!")
 

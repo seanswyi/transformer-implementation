@@ -1,8 +1,13 @@
-import torch.nn as nn
+import argparse
 
+import torch
+from torch import nn
+from torch.nn import functional as F
+
+from models.decoder import Decoder
 from models.embedding_layer import EmbeddingLayer
 from models.encoder import Encoder
-from models.decoder import Decoder
+from models.tokenizer import Tokenizer
 
 
 class Transformer(nn.Module):
@@ -22,7 +27,12 @@ class Transformer(nn.Module):
     softmax: <torch.nn.modules.activation.LogSoftmax> Log softmax to convert output to probabilities.
     vocab_size: <int> Size of vocabulary. Default is 16,000 in this implementation.
     """
-    def __init__(self, args):
+
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        tokenizer: Tokenizer,
+    ):
         """
         Basic initialization of Transformer.
 
@@ -37,6 +47,9 @@ class Transformer(nn.Module):
         self.d_model = self.args.d_model
         self.vocab_size = self.args.vocab_size
 
+        self.tokenizer = tokenizer
+        self.bos_token_id = tokenizer.bos_id()
+
         self.emb = EmbeddingLayer(self.args)
 
         encoders = [Encoder(self.args) for _ in range(self.num_stacks)]
@@ -45,7 +58,9 @@ class Transformer(nn.Module):
         decoders = [Decoder(self.args) for _ in range(self.num_stacks)]
         self.decoder_stack = nn.ModuleList(decoders)
 
-        self.output_linear = nn.Linear(in_features=self.d_model, out_features=self.vocab_size, bias=False)
+        self.output_linear = nn.Linear(
+            in_features=self.d_model, out_features=self.vocab_size, bias=False
+        )
         self.output_linear.weight = self.emb.embedding_layer.weight
 
         self.softmax = nn.LogSoftmax(dim=-1)
@@ -71,9 +86,8 @@ class Transformer(nn.Module):
         enc_output = self.encode(src_emb)
         dec_output = self.decode(tgt_emb, enc_output)
 
-        output2 = self.dropout(self.output_linear(dec_output))
-
-        return self.softmax(output2)
+        logits = self.dropout(self.output_linear(dec_output))
+        return logits
 
     def encode(self, src):
         """
@@ -102,3 +116,46 @@ class Transformer(nn.Module):
             output = self.decoder_stack[i](output, enc_output)
 
         return output
+
+    def translate(
+        self,
+        input_text: str | torch.Tensor,
+        device: str = "cpu",
+    ) -> str:
+        """Receives raw text as input and translates it.
+
+        Arguments
+        ---------
+        input_text: str | torch.tensor
+            Text to translate. It may be a raw text or a pre-processed tensor.
+
+        Returns
+        -------
+        translated_text: str
+            Translated input text.
+        """
+        if isinstance(input_text, str):
+            src = self.tokenizer.tokenize(input_text)
+            src = torch.tensor(src)
+        elif isinstance(input_text, torch.Tensor):
+            src = input_text
+        else:
+            raise NotImplementedError
+
+        tgt = torch.ones(size=(input_text.shape[0],)).reshape(-1, 1) * self.bos_token_id
+
+        src = src.to(device)
+        tgt = tgt.to(device)
+
+        for _ in range(src.shape[0]):
+            pred = F.softmax(self(src, tgt), dim=2)
+            pred = torch.argmax(pred, dim=2)[:, -1]
+            tgt = torch.cat((tgt, pred.view(-1, 1)), dim=-1)
+
+        # In order for SetntencePiece to properly work inputs need to be integers and lists.
+        tgt = tgt.long()
+        tgt = tgt.detach().cpu()
+        tgt = tgt[:, 1:].tolist()
+
+        translated_text = self.tokenizer.decode(tgt)
+        return translated_text

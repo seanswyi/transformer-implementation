@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 
 def adjust_learning_rate(step_num, d_model, warmup_steps):
@@ -21,37 +20,11 @@ def adjust_learning_rate(step_num, d_model, warmup_steps):
     return term1 * term2
 
 
-def decode_autoregressive(model, src):
-    """
-    Performs decoding in an autoregressive fashion.
-
-    Arguments
-    ---------
-    model: <models.transformer.Transformer> Transformer model to performing decoding.
-    src: <torch.Tensor> Input source sequence to be decoded (i.e., translated).
-    """
-    outputs = torch.ones(size=(src.shape[0],)).reshape(-1, 1) * 2
-
+def get_device() -> str:
     if torch.cuda.is_available():
-        src = src.to('cuda')
-        outputs = outputs.to('cuda')
+        return "cuda"
 
-    for _ in range(src.shape[1]):
-        prediction = F.softmax(model(src, outputs), dim=2)
-        prediction = torch.argmax(prediction, dim=2)[:, -1]
-        outputs = torch.cat((outputs, prediction.view(-1, 1)), dim=-1)
+    if torch.backends.mps.is_available():
+        return "mps"
 
-    return outputs[:, 1:]
-
-
-def translate(data, tokenizer):
-    """
-    Translates token ID's using the tokenizer.
-
-    Arguments
-    ---------
-    data: <torch.Tensor> Data to be translated.
-    tokenizer: <sentencepiece.SentencePieceProcessor> Sentencepiece tokenizer.
-    """
-    data = data.long().tolist()
-    return [tokenizer.DecodeIds(ids) for ids in data]
+    return "cpu"

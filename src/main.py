@@ -6,6 +6,7 @@ from datetime import datetime
 
 import torch
 import wandb
+
 from dataset import WMT2014Dataset
 from dotenv import load_dotenv
 from sacrebleu import corpus_bleu
@@ -14,7 +15,8 @@ from torch.nn import functional as F
 from tqdm import tqdm
 
 from models.transformer import Transformer
-from utils import adjust_learning_rate, decode_autoregressive, translate
+from train import train
+from utils import get_device
 
 
 load_dotenv()
@@ -297,7 +299,8 @@ def main(args):
     best_pred, best_epoch = train(args, model, data)
     train_end = time.time()
     logger.info(
-        f"Training took approximately {time.strftime('%H:%M:%S', time.gmtime(train_end - train_start))}"
+        "Training took approximately %s",
+        time.strftime("%H:%M:%S", time.gmtime(train_end - train_start)),
     )
 
     # If we evaluated during training, write predictions.
@@ -310,6 +313,7 @@ def main(args):
 
     model_file_name = args.log_filename.split("/")[-1]
     model_save_file = os.path.join(args.model_save_dir, model_file_name) + ".pt"
+    
     logger.info(f"Saving model in {args.model_save_dir} as {args.log_filename}")
     torch.save(model.state_dict(), model_save_file)
 
