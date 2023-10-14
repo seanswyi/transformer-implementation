@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-import torch.nn.functional as F
+from torch import nn
+from torch.nn import functional as F
 
 
 def adjust_learning_rate(step_num, d_model, warmup_steps):
@@ -29,3 +30,11 @@ def decode_autoregressive(model, src):
 def translate(data, tokenizer):
     data = data.long().tolist()
     return [tokenizer.DecodeIds(ids) for ids in data]
+
+
+def xavier_init_model(model):
+    for param in model.parameters():
+        try:
+            nn.init.xavier_uniform_(param)
+        except ValueError:
+            pass
