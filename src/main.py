@@ -269,7 +269,7 @@ def main(args):
 
 if __name__ == "__main__":
     right_now = time.time()
-    timestamp = datetime.fromtimestamp(right_now).strftime("%m%d%Y-%H%M")
+    timestamp = datetime.fromtimestamp(right_now).strftime("%m-%d-%Y-%H%M")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", default=128, type=int)
@@ -305,15 +305,20 @@ if __name__ == "__main__":
     parser.add_argument("--tokenizer_filename", default="sentence_piece", type=str)
     parser.add_argument("--wandb_name", default="", type=str)
     parser.add_argument("--warmup_steps", default=4000, type=int)
+
     args = parser.parse_args()
+
+    if args.wandb_name:
+        args.wandb_name = f"{args.wandb_name}_{timestamp}"
+    else:
+        args.wandb_name = f"transformer_{timestamp}"
 
     logger.info(args)
 
-    if args.wandb_name:
-        args.log_filename = f"../logs/{args.wandb_name}_{timestamp}"
-        wandb.init(project="transformer", name=args.wandb_name, config=args)
-    else:
-        args.log_filename = f"../logs/{timestamp}"
-        wandb.init(project="transformer", config=args)
+    wandb.init(
+        project="transformer",
+        name=args.wandb_name,
+        config=args,
+    )
 
     main(args)
