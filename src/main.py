@@ -6,6 +6,7 @@ from datetime import datetime
 
 import torch
 import wandb
+from dotenv import load_dotenv
 from sacrebleu import corpus_bleu
 from torch import nn, optim
 from torch.nn import functional as F
@@ -16,6 +17,7 @@ from models.transformer import Transformer
 from utils import adjust_learning_rate, decode_autoregressive, translate
 
 
+load_dotenv()
 logger = logging.getLogger()
 
 

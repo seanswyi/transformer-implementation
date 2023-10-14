@@ -7,3 +7,4 @@ wandb/
 logs/
 src/saved_models/
 predictions/
+.env
