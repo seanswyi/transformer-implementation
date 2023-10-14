@@ -271,6 +271,18 @@ if __name__ == "__main__":
     right_now = time.time()
     timestamp = datetime.fromtimestamp(right_now).strftime("%m-%d-%Y-%H%M")
 
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.join(current_dir, "..")
+    data_dir = os.path.join(parent_dir, "data")
+    log_dir = os.path.join(parent_dir, "logs")
+    outputs_dir = os.path.join(parent_dir, "outputs")
+
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+
+    if not os.path.exists(outputs_dir):
+        os.makedirs(outputs_dir, exist_ok=True)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", default=128, type=int)
     parser.add_argument("--beta1", default=0.9, type=float)
@@ -313,7 +325,14 @@ if __name__ == "__main__":
     else:
         args.wandb_name = f"transformer_{timestamp}"
 
-    logger.info(args)
+    args.current_dir = current_dir
+    args.parent_dir = parent_dir
+    args.data_dir = data_dir
+    args.log_dir = log_dir
+    args.outputs_dir = outputs_dir
+
+    log_filename = f"{args.wandb_name}.log"
+    args.log_filename = os.path.join(log_dir, log_filename)
 
     wandb.init(
         project="transformer",
