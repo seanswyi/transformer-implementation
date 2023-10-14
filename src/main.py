@@ -137,8 +137,9 @@ def train(args, model, data):
             evaluation_end = time.time()
             logger.info(f"Evaluation took approximately {time.strftime('%H:%M:%S', time.gmtime(evaluation_end - evaluation_start))}")
 
-            bleu_score = corpus_bleu('\n'.join(predictions_translated), '\n'.join(targets_translated)).score
+            bleu_score = corpus_bleu(predictions_translated, [targets_translated]).score
             wandb.log({"Evaluation BLEU": bleu_score})
+            logger.info("BLEU at epoch %d: %.4f", epoch, bleu_score)
 
             if bleu_score > best_bleu:
                 predictions_and_targets = [f"{p}\t{t}" for p, t in zip(best_pred, targets_translated)]
