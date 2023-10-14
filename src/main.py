@@ -14,7 +14,12 @@ from tqdm import tqdm
 
 from data import WMT2014Dataset
 from models.transformer import Transformer
-from utils import adjust_learning_rate, decode_autoregressive, translate
+from utils import (
+    adjust_learning_rate,
+    decode_autoregressive,
+    translate,
+    xavier_init_model,
+)
 
 
 load_dotenv()
@@ -234,6 +239,7 @@ def main(args):
 
     data = WMT2014Dataset(args)
     model = Transformer(args)
+    model.apply(xavier_init_model)
 
     if args.multiple_gpu:
         logger.info("Using multiple GPU's!")
