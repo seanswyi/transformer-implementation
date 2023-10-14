@@ -221,6 +221,7 @@ def evaluate(args, model, data, criterion):
 
 def main(args):
     global_process_start = time.time()
+
     msg_format = "[%(asctime)s - %(levelname)s - %(filename)s: %(lineno)d (%(funcName)s)] %(message)s"
     logging.basicConfig(
         format=msg_format,
@@ -251,9 +252,10 @@ def main(args):
 
     # If we evaluated during training, write predictions.
     if best_pred:
-        pred_filename = f"../predictions/{args.wandb_name}_pred_epoch{best_epoch}.txt"
-        logger.info(f"Writing predictions and targets to {pred_filename}.")
-        with open(file=pred_filename, mode="w") as f:
+        results_filename = f"{args.wandb_name}_results-epoch-{best_epoch}.txt"
+        results_filepath = os.path.join(args.outputs_dir, results_filename)
+        logger.info(f"Writing predictions and targets to {results_filepath}.")
+        with open(file=results_filepath, mode="w") as f:
             f.write("\n".join(best_pred) + "\n")
 
     model_file_name = args.log_filename.split("/")[-1]
