@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch import nn
 from torch.nn import functional as F
 
 
@@ -30,11 +29,3 @@ def decode_autoregressive(model, src):
 def translate(data, tokenizer):
     data = data.long().tolist()
     return [tokenizer.DecodeIds(ids) for ids in data]
-
-
-def xavier_init_model(model):
-    for param in model.parameters():
-        try:
-            nn.init.xavier_uniform_(param)
-        except ValueError:
-            pass
