@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-import torch.nn.functional as F
+from torch.nn import functional as F
 
 
 def adjust_learning_rate(step_num, d_model, warmup_steps):

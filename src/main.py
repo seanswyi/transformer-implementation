@@ -259,7 +259,9 @@ def main(args):
             f.write("\n".join(best_pred) + "\n")
 
     model_file_name = args.log_filename.split("/")[-1]
-    model_save_file = os.path.join(args.model_save_dir, model_file_name) + ".pt"
+    model_name = os.path.splitext(model_file_name)[0]
+    model_save_file = f"{os.path.join(args.model_save_dir, model_name)}.pt"
+
     logger.info(f"Saving model in {args.model_save_dir} as {args.log_filename}")
     torch.save(model.state_dict(), model_save_file)
 
