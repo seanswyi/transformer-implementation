@@ -8,3 +8,4 @@ logs/
 src/saved_models/
 predictions/
 .env
+/models/
