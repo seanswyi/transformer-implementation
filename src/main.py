@@ -21,9 +21,12 @@ load_dotenv()
 logger = logging.getLogger()
 
 
-def train(args, model, data):
-    tokenizer = data.tokenizer
-
+def train(
+    args,
+    model,
+    data,
+    tokenizer,
+):
     if torch.cuda.is_available():
         model = model.to("cuda")
     else:
@@ -41,17 +44,18 @@ def train(args, model, data):
     best_pred = []
     best_epoch = 0
 
-    epoch_progress_bar = tqdm(
-        iterable=range(args.num_epochs), desc="Epochs", total=args.num_epochs
+    train_progress_bar = tqdm(
+        iterable=range(args.num_epochs),
+        desc="Epochs",
+        total=args.num_epochs,
     )
-    for epoch in epoch_progress_bar:
+    for epoch in train_progress_bar:
         epoch_loss = 0.0
 
-        # Make sure to shuffle (training) data before every training epoch.
-        data.shuffle()
-
         step_progress_bar = tqdm(
-            iterable=data.train_data, desc="Training", total=len(data.train_data)
+            iterable=data.train_dataloader,
+            desc="Training",
+            total=len(data.train_dataloader),
         )
         epoch_start_time = time.time()
         for step, batch in enumerate(step_progress_bar):
@@ -250,7 +254,7 @@ def main(args):
     wandb.watch(model)
 
     train_start = time.time()
-    best_pred, best_epoch = train(args, model, data)
+    best_pred, best_epoch = train(args, model, data, tokenizer)
     train_end = time.time()
     logger.info(
         f"Training took approximately {time.strftime('%H:%M:%S', time.gmtime(train_end - train_start))}"
@@ -331,7 +335,9 @@ if __name__ == "__main__":
         choices=["unigram", "bpe", "char", "word"],
         help="Tokenization algorithm used to train tokenizer.",
     )
-    parser.add_argument("--tokenizer_filename", default="sentence_piece", type=str)
+    parser.add_argument(
+        "--tokenizer_filename", default="sentence_piece.model", type=str
+    )
     parser.add_argument("--wandb_name", default="", type=str)
     parser.add_argument("--warmup_steps", default=4000, type=int)
 
@@ -347,6 +353,8 @@ if __name__ == "__main__":
     args.data_dir = data_dir
     args.log_dir = log_dir
     args.outputs_dir = outputs_dir
+
+    args.tokenizer_filename = os.path.join(data_dir, args.tokenizer_filename)
 
     log_filename = f"{args.wandb_name}.log"
     args.log_filename = os.path.join(log_dir, log_filename)
