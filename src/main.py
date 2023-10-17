@@ -62,36 +62,14 @@ def train(
             step_loss = 0.0
             optimizer.zero_grad()
 
-            src, tgt = batch[:, 0], batch[:, 1]
+            batch["src"] = batch["src"].to("cuda")
+            batch["tgt"] = batch["tgt"].to("cuda")
 
-            # Skip empty cases.
-            for sample in tgt:
-                if sum(sample).item() == 0:
-                    continue
+            output = model(**batch)
 
-            bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
-            tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[
-                :, :-1
-            ]  # Truncate last token to match size.
-
-            # Find case where there is no padding and append EOS token.
-            tgt_shifted_right_last_idxs = tgt_shifted_right[:, -1].long().tolist()
-            nonzero_indices = [
-                idx for idx, x in enumerate(tgt_shifted_right_last_idxs) if x != 0
-            ]
-            if nonzero_indices:
-                for idx in nonzero_indices:
-                    tgt_shifted_right[idx][-1] = tokenizer.eos_id()
-
-            if torch.cuda.is_available():
-                src = src.to("cuda")
-                tgt = tgt.to("cuda")
-                tgt_shifted_right = tgt_shifted_right.to("cuda")
-            else:
-                logger.warning("Not using GPU!")
-
-            output = model(src, tgt_shifted_right)
-            loss = criterion(output.view(-1, args.vocab_size), tgt.view(-1).long())
+            loss = criterion(
+                output.view(-1, args.vocab_size), batch["tgt"].view(-1).long()
+            )
             step_loss += loss.item()
             epoch_loss += loss.item()
 
@@ -99,7 +77,9 @@ def train(
             optimizer.step()
 
             adjusted_lr = adjust_learning_rate(
-                global_step, args.d_model, args.warmup_steps
+                step_num=global_step,
+                d_model=args.d_model,
+                warmup_steps=args.warmup_steps,
             )
             for i in range(len(optimizer.param_groups)):
                 optimizer.param_groups[i]["lr"] = adjusted_lr
@@ -109,12 +89,11 @@ def train(
 
             if (step + 1) % args.log_step == 0:
                 logger.info(f"Step: {step} | Loss: {step_loss} | LR: {adjusted_lr}")
-                logger.info(f"Target Sample Tokens: {tgt[0].detach().long().tolist()}")
                 logger.info(
-                    f"Target Shifted Right Tokens: {tgt_shifted_right[0].detach().long().tolist()}"
+                    f"Target Sample Tokens: {batch['tgt'][0].detach().long().tolist()}"
                 )
                 logger.info(
-                    f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}"
+                    f"Target Sample: {tokenizer.DecodeIds(batch['tgt'][0].detach().long().tolist())}"
                 )
                 logger.info(
                     f"Prediction Sample Tokens: {predictions[0].detach().long().tolist()}"
@@ -158,13 +137,19 @@ def train(
     return predictions_and_targets, best_epoch
 
 
-def evaluate(args, model, data, criterion):
-    valid_data = data.valid_data
-    tokenizer = data.tokenizer
+def evaluate(
+    args,
+    model,
+    data,
+    criterion,
+    tokenizer,
+):
     model.eval()
 
     eval_progress_bar = tqdm(
-        iterable=valid_data, desc="Evaluating", total=len(valid_data)
+        iterable=data.valid_dataloader,
+        desc="Evaluating",
+        total=len(data.valid_dataloader),
     )
     eval_loss = 0.0
     predictions_translated = []
@@ -172,47 +157,25 @@ def evaluate(args, model, data, criterion):
 
     with torch.no_grad():
         for step, batch in enumerate(eval_progress_bar):
-            src, tgt = batch[:, 0], batch[:, 1]
-            bos_tokens = torch.ones(size=(tgt.shape[0],)).reshape(-1, 1) * 2
-            tgt_shifted_right = torch.cat((bos_tokens, tgt), dim=1)[
-                :, :-1
-            ]  # Truncate last token to match size.
+            batch["src"] = batch["src"].to("cuda")
+            batch["tgt"] = batch["tgt"].to("cuda")
 
-            # Skip empty cases.
-            for thing in tgt_shifted_right:
-                if sum(thing) == 2:
-                    continue
-
-            # Find case where there is no padding and append EOS token.
-            tgt_shifted_right_last_idxs = tgt_shifted_right[:, -1].long().tolist()
-            nonzero_indices = [
-                idx for idx, x in enumerate(tgt_shifted_right_last_idxs) if x != 0
-            ]
-            if nonzero_indices:
-                for idx in nonzero_indices:
-                    tgt_shifted_right[idx][-1] = tokenizer.eos_id()
-
-            if torch.cuda.is_available():
-                src = src.to("cuda")
-                tgt = tgt.to("cuda")
-                tgt_shifted_right = tgt_shifted_right.to("cuda")
-            else:
-                logger.warning("Not using GPU!")
-
-            output = model(src, tgt_shifted_right)
-            loss = criterion(output.view(-1, args.vocab_size), tgt.view(-1).long())
+            output = model(**batch)
+            loss = criterion(
+                output.view(-1, args.vocab_size), batch["tgt"].view(-1).long()
+            )
             eval_loss += loss.item()
 
-            decoded_outputs = decode_autoregressive(model=model, src=src)
+            decoded_outputs = decode_autoregressive(model=model, src=batch["src"])
 
             predictions = translate(data=decoded_outputs, tokenizer=tokenizer)
-            targets = translate(data=tgt, tokenizer=tokenizer)
+            targets = translate(data=batch["tgt"], tokenizer=tokenizer)
             predictions_translated.extend(predictions)
             targets_translated.extend(targets)
 
             logger.info(f"Step: {step}")
             logger.info(
-                f"Target Sample: {tokenizer.DecodeIds(tgt[0].detach().long().tolist())}"
+                f"Target Sample: {tokenizer.DecodeIds(batch['tgt'][0].detach().long().tolist())}"
             )
             logger.info(
                 f"Prediction Sample: {tokenizer.DecodeIds(decoded_outputs[0].detach().long().tolist())}"
