@@ -12,8 +12,8 @@ from torch import nn, optim
 from torch.nn import functional as F
 from tqdm import tqdm
 
-from data import WMT2014Dataset
-from models.transformer import Transformer
+from dataset import TextPairDataset
+from models import Tokenizer, Transformer
 from utils import adjust_learning_rate, decode_autoregressive, translate
 
 
@@ -232,7 +232,13 @@ def main(args):
         ],
     )
 
-    data = WMT2014Dataset(args)
+    tokenizer = Tokenizer(
+        tokenizer_name=args.tokenizer_filename,
+        train_text_files=",".join([args.src_train_file, args.tgt_train_file]),
+        vocab_size=args.vocab_size,
+        tokenization_algo=args.tokenization_algo,
+    )
+    data = TextPairDataset(args=args, tokenizer=tokenizer)
     model = Transformer(args)
 
     if args.multiple_gpu:
@@ -318,6 +324,13 @@ if __name__ == "__main__":
         "--tgt_valid_file", default="../data/valid.fr-en_preprocessed.en", type=str
     )
     parser.add_argument("--vocab_size", default=16000, type=int)
+    parser.add_argument(
+        "--tokenization_algo",
+        default="bpe",
+        type=str,
+        choices=["unigram", "bpe", "char", "word"],
+        help="Tokenization algorithm used to train tokenizer.",
+    )
     parser.add_argument("--tokenizer_filename", default="sentence_piece", type=str)
     parser.add_argument("--wandb_name", default="", type=str)
     parser.add_argument("--warmup_steps", default=4000, type=int)
