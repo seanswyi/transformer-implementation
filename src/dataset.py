@@ -24,7 +24,7 @@ class TextPairDataset:
         self.src_train_text = self.load(file=args.src_train_file)
         self.src_valid_text = self.load(file=args.src_valid_file)
         self.tgt_train_text = self.load(file=args.tgt_train_file)
-        self.tgt_valid_text = self.load(File=args.tgt_valid_file)
+        self.tgt_valid_text = self.load(file=args.tgt_valid_file)
 
         self.train_data = self.create_pair_data(
             src=self.src_train_text, tgt=self.tgt_train_text
