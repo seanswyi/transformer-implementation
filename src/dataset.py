@@ -1,163 +1,141 @@
+import argparse
 import logging
-import os
 
-import numpy as np
 import sentencepiece as spm
 import torch
+from torch.nn import functional as F
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
 logger = logging.getLogger()
 
 
-class WMT2014Dataset:
-    def __init__(self, args):
+class TextPairDataset:
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        tokenizer: spm.SentencePieceProcessor,
+    ):
         self.args = args
-        self.batch_size = self.args.batch_size
+        self.debug = args.debug
+        self.batch_size = args.batch_size
 
-        self.train_data = self.load(mode="train")
-        self.valid_data = self.load(mode="valid")
+        self.src_train_text = self.load(file=args.src_train_file)
+        self.src_valid_text = self.load(file=args.src_valid_file)
+        self.tgt_train_text = self.load(file=args.tgt_train_file)
+        self.tgt_valid_text = self.load(File=args.tgt_valid_file)
 
-        self.tokenizer = spm.SentencePieceProcessor()
-        self.tokenizer_path = os.path.join(
-            self.args.data_root, self.args.tokenizer_filename
+        self.train_data = self.create_pair_data(
+            src=self.src_train_text, tgt=self.tgt_train_text
         )
-        try:
-            self.tokenizer.load(self.tokenizer_path + ".model")
-        except OSError:
-            logger.info(
-                "Training tokenizer and saving in %s" % self.args.tokenizer_filename
-            )
-            train_command = "--input={} --model_prefix={} --vocab_size={} --model_type=bpe --bos_id=2 --eos_id=3 --pad_id=0 --unk_id=1"
-            train_file = ",".join([self.args.src_train_file, self.args.tgt_train_file])
-            spm.SentencePieceTrainer.train(
-                train_command.format(
-                    train_file, self.tokenizer_path, self.args.vocab_size
-                )
-            )
-            self.tokenizer.load(self.tokenizer_path + ".model")
-
-        self.train_tokenized_data = self.tokenize(mode="train")
-        self.valid_tokenized_data = self.tokenize(mode="valid")
-
-        src_train_longest = max([len(x[0]) for x in self.train_tokenized_data])
-        tgt_train_longest = max([len(x[1]) for x in self.train_tokenized_data])
-
-        if self.args.max_seq_len:
-            self.max_seq_len = self.args.max_seq_len
-        else:
-            self.max_seq_len = max(src_train_longest, tgt_train_longest)
-
-        self.src_train_data, self.tgt_train_data = self.process(
-            self.train_tokenized_data
-        )
-        self.src_valid_data, self.tgt_valid_data = self.process(
-            self.valid_tokenized_data
+        self.valid_data = self.create_pair_data(
+            src=self.src_valid_text, tgt=self.tgt_valid_text
         )
 
-        self.train_data = torch.tensor(
-            [[x, y] for x, y in zip(self.src_train_data, self.tgt_train_data)]
+        self.tokenizer = tokenizer
+
+        self.train_dataloader = DataLoader(
+            dataset=self.train_data,
+            batch_size=self.batch_size,
+            shuffle=True,
+            collate_fn=self.collate_fn,
         )
-        self.valid_data = torch.tensor(
-            [[x, y] for x, y in zip(self.src_valid_data, self.tgt_valid_data)]
+        self.valid_dataloader = DataLoader(
+            dataset=self.valid_data,
+            batch_size=self.batch_size,
+            collate_fn=self.collate_fn,
         )
 
-        self.train_data = self.create_batches(data=self.train_data)
-        self.valid_data = self.create_batches(data=self.valid_data)
+    def collate_fn(
+        self,
+        batch: list[list[str, str]],
+    ) -> torch.Tensor:
+        srcs = [x[0] for x in batch]
+        tgts = [x[1] for x in batch]
 
-    def load(self, mode="train"):
-        if mode == "train":
-            logger.info(
-                "Loading src and tgt from %s | %s"
-                % (self.args.src_train_file, self.args.tgt_train_file)
+        src_input_ids = [self.tokenizer(src) for src in srcs]
+        max_src_len = max(len(src) for src in src_input_ids)
+        src_input_ids_padded = [
+            F.pad(
+                input=src,
+                pad=(0, max_src_len - len(src)),
+                value=self.tokenizer.pad_id(),
             )
-            with open(file=self.args.src_train_file, mode="r", encoding="utf-8") as f:
-                self.src_data = [line.lower().strip() for line in f.readlines()]
-
-            with open(file=self.args.tgt_train_file, mode="r", encoding="utf-8") as f:
-                self.tgt_data = [line.lower().strip() for line in f.readlines()]
-        elif mode == "valid":
-            logger.info(
-                "Loading src and tgt from %s | %s"
-                % (self.args.src_valid_file, self.args.tgt_valid_file)
-            )
-            with open(file=self.args.src_valid_file, mode="r", encoding="utf-8") as f:
-                self.src_data = [line.lower().strip() for line in f.readlines()]
-
-            with open(file=self.args.tgt_valid_file, mode="r", encoding="utf-8") as f:
-                self.tgt_data = [line.lower().strip() for line in f.readlines()]
-        else:
-            raise NotImplementedError
-
-        # If we're debugging, then we only need a small number of samples. Doesn't have to be 100.
-        if self.args.debug:
-            self.src_data = self.src_data[:100]
-            self.tgt_data = self.tgt_data[:100]
-
-        return [[src, tgt] for src, tgt in zip(self.src_data, self.tgt_data)]
-
-    def tokenize(self, mode="train"):
-        if mode == "train":
-            logger.info("Tokenizing train data...")
-            progress_bar = tqdm(
-                iterable=self.train_data,
-                desc="Tokenizing train data",
-                total=len(self.train_data),
-            )
-        elif mode == "valid":
-            logger.info("Tokenizing valid data...")
-            progress_bar = tqdm(
-                iterable=self.valid_data,
-                desc="Tokenizing valid data",
-                total=len(self.valid_data),
-            )
-        else:
-            raise NotImplementedError
-
-        return [
-            [self.tokenizer.EncodeAsIds(src), self.tokenizer.EncodeAsIds(tgt)]
-            for src, tgt in progress_bar
+            for src in src_input_ids
         ]
+        src_inputs = torch.vstack(src_input_ids_padded)
 
-    def process(self, data):
-        logger.info("Converting tokenized data into input templates.")
-        src_data = [
-            [self.tokenizer.bos_id()] + x[0] + [self.tokenizer.eos_id()] for x in data
+        tgt_input_ids = [
+            self.tokenizer.build_inputs_with_special_tokens(tgt) for tgt in tgts
         ]
-        tgt_data = [x[1] + [self.tokenizer.eos_id()] for x in data]
-        src_data_template = np.zeros(shape=(len(data), self.max_seq_len))
-        tgt_data_template = np.zeros(shape=(len(data), self.max_seq_len))
+        max_tgt_len = max(len(tgt) for tgt in tgt_input_ids)
+        tgt_input_ids_padded = [
+            F.pad(
+                input=tgt,
+                pad=(0, max_tgt_len - len(tgt)),
+                value=self.tokenizer.pad_id(),
+            )
+            for tgt in tgt_input_ids
+        ]
+        tgt_inputs = torch.vstack(tgt_input_ids_padded)
 
-        assert (
-            src_data_template.shape == tgt_data_template.shape
-        ), "src and tgt are different shapes!"
+        return {"src": src_inputs, "tgt": tgt_inputs}
 
-        count = 0
-        for i in range(src_data_template.shape[0]):
-            try:
-                src_data_template[i][: len(src_data[i])] = src_data[i]
-                tgt_data_template[i][: len(tgt_data[i])] = tgt_data[i]
-            except ValueError:
-                count += 1
+    def load(
+        self,
+        file: str,
+    ) -> list[str]:
+        with open(file=file) as f:
+            data = [line.lower().strip() for line in f.readlines()]
+
+        if self.debug:
+            data = data[:100]
+
+        return data
+
+    def create_pair_data(
+        self,
+        src: list[str],
+        tgt: list[str],
+    ) -> list[list[str, str]]:
+        assert len(src) == len(tgt)
+
+        empty_src_count = 0
+        empty_tgt_count = 0
+        both_empty_count = 0
+
+        pairs = []
+        pbar = tqdm(
+            iterable=zip(src, tgt),
+            desc=f"Creating pair data from {len(src)} pairs",
+            total=len(src),
+        )
+        for s, t in pbar:
+            if not src and tgt:
+                empty_src_count += 1
                 continue
 
-        logger.info(f"{count} samples were discarded due to length.")
+            if src and not tgt:
+                empty_tgt_count += 1
+                continue
 
-        return src_data_template, tgt_data_template
+            if not src and not tgt:
+                both_empty_count += 1
+                continue
 
-    def create_batches(self, data):
-        num_batches = len(data) // self.batch_size
-        batch_data = data[: (num_batches * self.batch_size)]
+            pairs.append((s, t))
 
-        num_discarded_samples = len(data) - (num_batches * self.batch_size)
-        if num_discarded_samples:
-            logger.info(
-                "Discarding %d sample(s)."
-                % (len(data) - (num_batches * self.batch_size))
-            )
+        logger.info(
+            "Created pair data of %d pairs. %d total were dropped.",
+            len(pairs),
+            len(src) - len(pairs),
+        )
+        logger.info(
+            "%d empty source samples, %d empty target samples, %d both empty samples.",
+            empty_src_count,
+            empty_tgt_count,
+            both_empty_count,
+        )
 
-        return batch_data.view(num_batches, self.batch_size, 2, self.max_seq_len)
-
-    def shuffle(self):
-        shuffle_idxs = torch.randperm(n=self.train_data.shape[0])
-        self.train_data = self.train_data[shuffle_idxs]
+        return pairs
