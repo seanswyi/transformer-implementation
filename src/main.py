@@ -116,7 +116,11 @@ def train(
         if args.evaluate_during_training:
             evaluation_start = time.time()
             _, predictions_translated, targets_translated = evaluate(
-                args, model, data, criterion
+                args,
+                model,
+                data,
+                criterion,
+                tokenizer,
             )
             evaluation_end = time.time()
             logger.info(
